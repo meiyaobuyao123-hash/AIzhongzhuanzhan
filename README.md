@@ -12,7 +12,8 @@ AI 中转站 SaaS 项目立项资料库。
 - [docs/competitor-analysis.md](docs/competitor-analysis.md) — AI 中转站竞品调研（2026-05-05），覆盖 18 家玩家，从竞争格局 / 盈利模式 / 产品力 / 路由策略 4 个维度横向对比，给国内创业者落地建议。
 
 ### 设计
-- [prompts/claude-design-prompts.md](prompts/claude-design-prompts.md) — Claude design 提示词包，完整多页营销站设计提示词（首页 / 模型 / 定价 / 文档 / 控制台 / 登录注册），含品牌候选（Prism / Nimbus / Mesh / Axiom / 百模）、设计系统 token、视觉风格"3D 酒店风"。
+- [prompts/claude-design-prompts.md](prompts/claude-design-prompts.md) — Claude design 提示词包 v1，完整多页营销站设计提示词（首页 / 模型 / 定价 / 文档 / 控制台 / 登录注册），含品牌候选（Prism / Nimbus / Mesh / Axiom / 百模）、设计系统 token、视觉风格"3D 酒店风"。
+- [prompts/models-page-v2-refined.md](prompts/models-page-v2-refined.md) — `/models` 页迭代 prompt v2，把 v1 的 OpenRouter 克隆式卡片网格重构为"按场景挑模型 + 渠道透明 banner + 紧凑表格"的内容架构，保留视觉系统不变。
 
 ## 注意
 
