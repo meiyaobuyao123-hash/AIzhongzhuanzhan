@@ -15,6 +15,18 @@ AI 中转站 SaaS 项目立项资料库。
 - [prompts/claude-design-prompts.md](prompts/claude-design-prompts.md) — Claude design 提示词包 v1，完整多页营销站设计提示词（首页 / 模型 / 定价 / 文档 / 控制台 / 登录注册），含品牌候选（Prism / Nimbus / Mesh / Axiom / 百模）、设计系统 token、视觉风格"3D 酒店风"。
 - [prompts/models-page-v2-refined.md](prompts/models-page-v2-refined.md) — `/models` 页迭代 prompt v2，把 v1 的 OpenRouter 克隆式卡片网格重构为"按场景挑模型 + 渠道透明 banner + 紧凑表格"的内容架构，保留视觉系统不变。
 
+### 原型
+- [site/index.html](site/index.html) — Prism 首页 v2（落地版），10 段长 landing：Hero + 实时切模型 demo / Trust strip / Features / 接入演示 / 客户端兼容 / 按场景挑模型 / 渠道透明 banner / "我们不做的事" / 定价 + 实时计算器 / FAQ / Final CTA。直接 `open site/index.html` 在浏览器看，无需 build。
+
+## 本地预览
+
+```bash
+open site/index.html
+# 或者
+python3 -m http.server 8000 --directory site
+# 然后访问 http://localhost:8000
+```
+
 ## 注意
 
 调研结果时效性强（市场变化以周为单位），所有结论附有抓取时间戳；做业务决策前请先核对当时最新的官网与定价。
