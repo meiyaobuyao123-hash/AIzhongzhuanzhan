@@ -12,7 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.errors import PrismException, error_response
 from app.logging_config import configure_logging, logger
-from app.routes import account, auth, chat, health, messages, models, usage
+from app.routes import account, auth, chat, health, messages, models, oauth, usage
 
 # Configure logging at module import (uvicorn imports this once).
 configure_logging()
@@ -75,5 +75,6 @@ app.include_router(models.router)
 app.include_router(messages.router)
 app.include_router(chat.router)
 app.include_router(auth.router)
+app.include_router(oauth.router)
 app.include_router(account.router)
 app.include_router(usage.router)
