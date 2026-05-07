@@ -14,7 +14,7 @@
 ```
 {
   user_id:    42,
-  user_tier:  "developer",      // free / developer / team
+  user_tier:  "self-serve",     // self-serve / team
   api_key_id: 17,
   request: {
     model: "claude-opus-4.5",
@@ -64,9 +64,8 @@
 ┌─────────────────────────────────────────────────────────┐
 │                    Layer 1: 档位过滤                     │
 │  user.tier 决定可用 channel 集合                         │
-│    free      → 共享池 default 分组                       │
-│    developer → default + dev 分组                        │
-│    team      → 私有渠道 + 兜底主池                        │
+│    self-serve → 共享池 default 分组                       │
+│    team       → 私有渠道 + 兜底主池                       │
 └─────────────────────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────┐
@@ -105,8 +104,7 @@
 
 ```
 default：     基础共享池（Anthropic 直连主账号 + Bedrock 主账号 + ...）
-dev：         开发者高优先级（含 prompt cache 优化、专享备份 channel）
-team-shared： 企业基础（含 SLA 承诺、含日志 0 保留）
+team-shared： 企业共享池（含 SLA 承诺、含日志 0 保留 channel）
 team-{id}：   单租户私有渠道（仅给某个 Team 客户用）
 ```
 
@@ -114,9 +112,21 @@ team-{id}：   单租户私有渠道（仅给某个 Team 客户用）
 
 | user_tier | 可用分组 | 说明 |
 |---|---|---|
-| free | default | 限速最严，与所有人挤同一池 |
-| developer | default + dev | dev 分组优先，default 兜底 |
+| self-serve | default | 共享 default 池；限速按充值阶梯（60-600 RPM）动态调整 |
 | team | team-{id} + team-shared + default | 私有渠道优先，逐级兜底 |
+
+### 2.2.1 self-serve 内的运行时差异化
+
+虽然 self-serve 在 channel 层是同一个池，但运行时仍按"累计充值"区分待遇：
+
+| 累计充值 | RPM | 优先级（同分组内） | Prompt cache 命中价 |
+|---|---|---|---|
+| < $50 | 60 | 普通 | 透传，无额外优化 |
+| $50 - $500 | 240 | 普通 | 透传 |
+| $500 - $5000 | 600 | 优先（队列前置）| 透传 + 智能 cache 提示 |
+| > $5000 | 1200 | 优先 | 透传 + 智能 cache 提示 + 自动建议升 Team |
+
+这些差异在 channel 选择上不变（都走 default 池），只在请求节流和队列上分级。
 
 ### 2.3 与同行的区别
 
@@ -277,10 +287,9 @@ ch3 虽然便宜 10%，但因为人工 weight 只有 30，最终命中率不会�
 
 | 档位 | 默认算法 | 备注 |
 |---|---|---|
-| free | 价格²反比 | 优先用便宜渠道 |
-| developer | 价格²反比 + 健康加权 | health > 50 的优先 |
-| team-shared | priority 严格降序 | 不冒险，先打主账号 |
-| team-{id} | 私有 channel 直接命中（无加权） | 不和别人共享 |
+| self-serve | 价格²反比 + 健康加权 | health > 50 的优先；累计充值 > $500 的用户在加权基础上再加 priority bias |
+| team-shared | priority 严格降序 | 不冒险，先打主账号；SLA 承诺要求确定性 |
+| team-{id} | 私有 channel 直接命中（无加权） | 不和别人共享，独占容量 |
 
 ---
 
