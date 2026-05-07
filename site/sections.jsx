@@ -451,32 +451,38 @@ function PricingPreview() {
     <section className="pricing" id="pricing">
       <SectionHeader
         kicker="定价"
-        title="你看到的价 · 就是我们采购的成本"
-        sub="Cost = price. We make money on top-up fees and enterprise services, never on inference."
+        title="充 1 万到账 9995 · 0% 加价"
+        sub="Inference cost = price. Top-up fee 0.05% (the lowest in industry, only covers bank transfer cost)."
       />
-      <div className="price-grid">
+      <div className="price-grid price-grid-2">
         <PriceCard
-          tier="Free"
-          price="¥0 起"
-          tagline="充值即用 · 注册送 $5 测试额度"
-          features={['全部 200+ 模型','共享路由','限速 60 RPM','无月费']}
-          cta="立即注册"
-          ctaHref="#signup"
-        />
-        <PriceCard
-          tier="Developer"
+          tier="Self-serve"
           featured
           price="按量付费"
-          tagline="0% 加价 · cost = price"
-          features={['全部 200+ 模型','高优先级路由 + prompt cache','限速 600 RPM','支付宝 / 微信充值','5% 邀请返佣']}
-          cta="开始使用"
+          tagline="充值即用 · 万 5 手续费 · 0% 加价"
+          features={[
+            '全部 200+ 模型',
+            'OpenAI / Anthropic / Gemini 协议',
+            '高优先级路由 + prompt cache 透传',
+            '限速按充值阶梯 60 → 1200 RPM',
+            '支付宝 / 微信 / USDT 充值',
+            '5% 邀请返佣',
+          ]}
+          cta="立即注册"
           ctaHref="#signup"
         />
         <PriceCard
           tier="Team"
           price="联系销售"
-          tagline="对公收款 · 增值税专票 · SLA"
-          features={['对公合同 + 月结','私有上游渠道','SLA 99.95% + 7×24','专属客户经理','自定义限速']}
+          tagline="对公合同 · 专票 · SLA · 私有渠道"
+          features={[
+            'Self-serve 全部能力',
+            '对公收款 + 月结合同',
+            '增值税专票',
+            '私有上游渠道（独占容量）',
+            'SLA 99.95% + 7×24 工单',
+            '专属客户经理 + 数据不出境承诺',
+          ]}
           cta="联系销售"
           ctaHref="#contact"
         />
@@ -516,12 +522,13 @@ function PricingPreview() {
             </div>
             <div className="pc-result-row pc-result-secondary">
               <span>vs 官方价</span>
-              <span className="mono">±0.00 · 一致</span>
+              <span className="mono">±0.00 · 完全一致</span>
             </div>
           </div>
         </div>
         <div className="pc-note">
-          按 <code>price_in × token_in + price_out × token_out</code> 精确计算。每条请求扣费写进 <code>usage_logs</code>，月底可下载对账 CSV。
+          Inference 按 <code>price_in × token_in + price_out × token_out</code> 精确计算，与上游一致。
+          充值时另收 <code>0.05%</code> 手续费（充 1 万到账 9995）。每条请求扣费写进 <code>usage_logs</code>，月底可下载对账 CSV。
         </div>
       </div>
     </section>
@@ -582,8 +589,8 @@ function FinalCTA() {
     <section className="final-cta" id="signup">
       <div className="fcta-card">
         <div className="fcta-eyebrow mono">ready when you are</div>
-        <h2 className="fcta-title display">现在注册 · 立刻拿到 $5 测试额度</h2>
-        <p className="fcta-sub">200+ 模型即开即用 · 微信 / 支付宝充值 · 不需要信用卡</p>
+        <h2 className="fcta-title display">充 1 万到账 9995 · 立刻接入 200+ 模型</h2>
+        <p className="fcta-sub">0% 加价 · 万 5 手续费 · 微信 / 支付宝 / USDT / 对公全通道</p>
         <div className="fcta-row">
           <a className="cta-primary" href="#signup">立即注册 <Arrow2/></a>
           <a className="cta-ghost" href="#docs">读 5 分钟 Quick Start</a>

@@ -152,7 +152,7 @@ Single long page, scrolls vertically, with these sections in order:
 - English subtitle (mono, --text-muted, smaller):
   "One prism, every spectrum of AI."
 - CTA group:
-  - Primary [立即注册 · 送 $5 额度] in iridescent gradient
+  - Primary [立即注册 · 充 1 万到账 9995] in iridescent gradient
   - Secondary [查看模型列表] ghost button
 - Right side (or behind the headline on a separate z-layer):
   the rotating 3D glass prism, refracting a horizontal light beam
@@ -211,11 +211,10 @@ context window, input/output price, [开始使用] mini-CTA.
 Show ~6 cards visible, with [查看全部 200+ 模型 →] link to /models.
 
 ## Section 7: 定价预览（Pricing preview）
-3-column comparison: Free / Developer / Team.
-Free: $5 注册赠送 / 基础限速 / 全部 200+ 模型
-Developer: 按量付费 / 无月费 / 高优先级 / 邀请返佣 5%
-Team: 对公合同 / 专票 / 私有渠道 / SLA 99.95% / 专属客户经理
-Each card has a [查看完整定价 →] link.
+2-column comparison: Self-serve / Team.
+Self-serve: 按量付费 / 0% 加价 / 万 5 手续费（充 10000 到账 9995）/ 全部 200+ 模型 / 高优先级路由 + prompt cache 透传 / 邀请返佣 5%
+Team: 对公合同 / 增值税专票 / 私有上游渠道 / SLA 99.95% / 专属客户经理 / 数据不出境承诺
+Each card has a [查看完整定价 →] link. **没有 Free 档**（不送免费额度，第一笔就是充值）。
 
 ## Section 8: FAQ（Accordion, 6-8 items）
 - {{BRAND}} 和直接调官方 API 有什么区别？
@@ -226,8 +225,8 @@ Each card has a [查看完整定价 →] link.
 - 出现故障怎么办？SLA 是什么？
 
 ## Section 9: Final CTA
-Massive iridescent gradient banner: "现在注册，立即获得 $5 测试额度"
-with [立即注册] CTA and small print "无需信用卡 · 微信/支付宝充值"
+Massive iridescent gradient banner: "充 1 万到账 9995 · 立刻接入 200+ 模型"
+with [立即注册] CTA and small print "0% 加价 · 万 5 手续费 · 微信/支付宝/USDT/对公全通道"
 
 ## Section 10: Footer
 - Brand mark + 一句话定位
@@ -303,48 +302,40 @@ Slides in from the right, 480px wide. Contains:
 Design the /pricing page of {{BRAND}}. Tone: confident transparency.
 
 ## Hero strip
-"明牌定价 · 不暗扣 · 不降级"
-Subtitle: "我们公开每个模型的真实倍率，并把上游渠道列在你面前。"
+"充 1 万到账 9995 · 0% 加价 · 万 5 手续费"
+Subtitle: "Inference 全部按上游真实成本结算，万分之五手续费仅覆盖银行通道费。"
 
-## Section A: 三档套餐对比（Plan comparison）
-Three large cards side-by-side, the "Developer" card highlighted with
-iridescent gradient border:
+## Section A: 两档套餐对比（Plan comparison）
+Two large cards side-by-side. **没有 Free 档**：注册不送 token，第一笔就是充值。
 
-### Free
-- ¥0 起 / 充值即用
-- 注册送 $5 测试额度
-- 全部 200+ 模型
-- 共享路由
-- 限速 60 RPM
+### Self-serve  ← featured
+- 按量付费，0% 加价
+- 充值手续费 0.05%（充 10000 到账 9995）
+- 全部 200+ 模型 · OpenAI / Anthropic / Gemini 协议
+- 高优先级路由 + prompt cache 透传
+- 限速按累计充值阶梯 60 → 1200 RPM
+- 支付宝 / 微信 / USDT 充值
+- 5% 邀请返佣
 - [立即注册]
 
-### Developer  ← featured
-- 按量付费，无月费
-- 全部 200+ 模型
-- 高优先级路由 + prompt cache
-- 限速 600 RPM
-- 对私支付宝/微信
-- 5% 邀请返佣
-- [开始使用]
-
 ### Team
-- 对公收款 + 增值税专票
-- 私有上游渠道
+- Self-serve 全部能力
+- 对公收款 + 月结合同 + 增值税专票
+- 私有上游渠道（独占容量）
 - SLA 99.95% + 7×24 工单
-- 专属客户经理
-- 自定义限速
+- 专属客户经理 + 数据不出境承诺
 - [联系销售]
 
 ## Section B: 模型倍率明细表（Model rate table）
-Tagline: "每个模型的倍率都在这里。我们和你一样讨厌猜价格。"
+Tagline: "每个模型的真实成本都在这里。我们一分钱不加。"
 A clean table with sticky header:
-| 模型 | 上下文 | 输入 (¥/M tokens) | 输出 (¥/M tokens) | 倍率 vs 官方 | Prompt cache | 上游渠道 |
-Show top 20 most popular models. Below table: "查看全部 200+ 模型倍率 →"
+| 模型 | 上下文 | 输入 (¥/M tokens) | 输出 (¥/M tokens) | vs 官方 | Prompt cache | 上游渠道 |
+Show top 20 popular models. 「vs 官方」一栏永远是「= 一致」。Below table: "查看全部 200+ 模型 →"
 link to /models.
 
 ## Section C: 充值方式
 A row of icons: 支付宝 / 微信支付 / USDT / 对公转账 / Stripe (海外)
-Below: "最低充值 $5 · 余额永不过期 · 7 天无理由退款"
+Below: "最低充值 $5 · 万分之五手续费 · 余额永不过期 · 7 天无理由退款"
 
 ## Section D: 倍率计算演示（Live calculator）
 A small interactive widget:
@@ -487,12 +478,12 @@ showing the brand prism from a different angle (slow rotation, ambient).
 
 ## Signup form
 - "创建你的 {{BRAND}} 账号"
-- Subtitle: "注册即送 $5 测试额度"
+- Subtitle: "注册后充值即用 · 万分之五手续费 · 0% 加价"
 - Same OAuth buttons
-- Email + password + 邀请码（选填，标注"使用邀请码双方各得 $2"）
+- Email + password + 邀请码（选填，标注"使用邀请码双方各得 5% 充值返佣"）
 - Checkbox: 我已阅读并同意 服务条款
 - [创建账号]
-- 下方："邀请好友 · 注册返佣"提示卡
+- 下方："邀请好友 · 双方各得 5% 充值返佣"提示卡
 
 ## Right side artwork
 - 3D prism, rotating 0.05 rad/s, refracting an incoming beam

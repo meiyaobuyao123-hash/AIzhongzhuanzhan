@@ -143,8 +143,8 @@ Headline: "你的客户端，零改造接入。"
 
 ## Section 6: Final CTA
 Reuse existing iridescent banner pattern.
-"现在注册，立即获得 $5 测试额度 · 全部 200+ 模型即开即用"
-[立即注册] CTA + small print "无需信用卡 · 微信/支付宝充值"
+"充 1 万到账 9995 · 立刻接入全部 200+ 模型 · 0% 加价 · 万 5 手续费"
+[立即注册] CTA + small print "微信/支付宝/USDT/对公全通道 · 无需信用卡"
 
 # Important notes for the AI
 

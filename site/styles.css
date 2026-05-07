@@ -1266,6 +1266,12 @@ input, textarea, select { font-family: inherit; }
   gap: 16px;
   margin-bottom: 32px;
 }
+.price-grid.price-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
 .price-card {
   position: relative;
   padding: 28px 24px;
