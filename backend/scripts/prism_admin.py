@@ -24,6 +24,7 @@ from rich.table import Table
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
+from app.audit import record_audit
 from app.auth import generate_prism_key
 from app.config import settings
 from app.crypto import encrypt
@@ -31,6 +32,7 @@ from app.db import SessionLocal
 from app.logging_config import configure_logging
 from app.models.orm import (
     ApiKey,
+    AuditLog,
     BalanceTransaction,
     Channel,
     Model,
@@ -48,12 +50,14 @@ channel_app = typer.Typer(no_args_is_help=True, help="Manage upstream channels")
 model_app = typer.Typer(no_args_is_help=True, help="Manage model catalog")
 payment_app = typer.Typer(no_args_is_help=True, help="Manage top-up payments")
 usage_app = typer.Typer(no_args_is_help=True, help="Usage stats / reporting")
+audit_app = typer.Typer(no_args_is_help=True, help="View admin audit log")
 app.add_typer(user_app, name="user")
 app.add_typer(key_app, name="key")
 app.add_typer(channel_app, name="channel")
 app.add_typer(model_app, name="model")
 app.add_typer(payment_app, name="payment")
 app.add_typer(usage_app, name="usage")
+app.add_typer(audit_app, name="audit")
 
 
 def _run(coro):
@@ -86,8 +90,14 @@ def user_create(
     async def _go():
         async with SessionLocal() as db:
             try:
-                u = User(email=email, tier=tier, is_admin=admin)
+                u = User(email=email, tier=tier, is_admin=admin, email_verified=True)
                 db.add(u)
+                await db.flush()
+                await record_audit(
+                    db, actor="admin-cli", action="user.create",
+                    target=str(u.id),
+                    payload={"email": email, "tier": tier, "is_admin": admin},
+                )
                 await db.commit()
                 await db.refresh(u)
                 console.print(f"[green]✓[/] Created user [bold]{u.id}[/] ({email}, tier={tier})")
@@ -134,6 +144,9 @@ def user_disable(id_: Annotated[int, typer.Option("--id", help="User ID")]) -> N
                 console.print(f"[red]✗[/] User {id_} not found")
                 raise typer.Exit(1)
             u.enabled = False
+            await record_audit(
+                db, actor="admin-cli", action="user.disable", target=str(id_)
+            )
             await db.commit()
             console.print(f"[yellow]✓[/] User {id_} disabled")
 
@@ -170,6 +183,10 @@ def user_topup(
                 balance_after_micro_cents=u.balance_micro_cents,
                 description=f"Top-up via {channel}; gross ${amount:.2f}, fee {_micro_cents_to_usd_str(fee_mc)}{f'; note: {note}' if note else ''}",
             ))
+            await record_audit(
+                db, actor="admin-cli", action="user.topup", target=str(u.id),
+                payload={"channel": channel, "amount_usd": amount, "fee_usd": fee_mc / 100_000_000},
+            )
             await db.commit()
 
             console.print(
@@ -229,6 +246,11 @@ def key_create(
                 rate_limit_rpm=rate_limit_rpm,
             )
             db.add(ak)
+            await db.flush()
+            await record_audit(
+                db, actor="admin-cli", action="key.create", target=str(ak.id),
+                payload={"user_id": user_id, "name": name, "rate_limit_rpm": rate_limit_rpm},
+            )
             await db.commit()
             await db.refresh(ak)
 
@@ -276,6 +298,9 @@ def key_revoke(id_: Annotated[int, typer.Option("--id", help="ApiKey ID")]) -> N
                 console.print(f"[red]✗[/] Key {id_} not found")
                 raise typer.Exit(1)
             ak.enabled = False
+            await record_audit(
+                db, actor="admin-cli", action="key.revoke", target=str(id_)
+            )
             await db.commit()
             console.print(f"[yellow]✓[/] Key {id_} revoked")
 
@@ -317,12 +342,127 @@ def channel_add(
                 weight=weight,
             )
             db.add(ch)
+            await db.flush()
+            await record_audit(
+                db, actor="admin-cli", action="channel.create", target=str(ch.id),
+                payload={
+                    "provider": provider, "name": name, "base_url": base_url,
+                    "models": model_list, "priority": priority, "weight": weight,
+                    # Note: upstream_key NOT included in audit payload
+                },
+            )
             await db.commit()
             await db.refresh(ch)
             console.print(
                 f"[green]✓[/] Added channel {ch.id}: {provider}/{name} "
                 f"(models={model_list}, priority={priority}, weight={weight})"
             )
+
+    _run(_go())
+
+
+@channel_app.command("test")
+def channel_test(id_: Annotated[int, typer.Option("--id", help="Channel ID")]) -> None:
+    """Send a minimal request through the channel to verify upstream Key works."""
+    import httpx
+    from app.crypto import decrypt
+
+    async def _go():
+        async with SessionLocal() as db:
+            ch = await db.get(Channel, id_)
+            if not ch:
+                console.print(f"[red]✗[/] Channel {id_} not found")
+                raise typer.Exit(1)
+            try:
+                upstream_key = decrypt(ch.upstream_key_encrypted, settings.master_key)
+            except Exception as exc:
+                console.print(f"[red]✗[/] Failed to decrypt upstream_key: {exc}")
+                raise typer.Exit(2)
+
+        # Build a minimal probe per provider. Single-token request.
+        models = json.loads(ch.models) if ch.models else []
+        if not models:
+            console.print(f"[red]✗[/] Channel has no models attached")
+            raise typer.Exit(3)
+        model_id = models[0]
+
+        async with httpx.AsyncClient(timeout=30, base_url=ch.base_url) as client:
+            try:
+                if ch.provider == "anthropic":
+                    resp = await client.post(
+                        "/v1/messages",
+                        headers={
+                            "x-api-key": upstream_key,
+                            "anthropic-version": "2023-06-01",
+                        },
+                        json={
+                            "model": model_id,
+                            "max_tokens": 1,
+                            "messages": [{"role": "user", "content": "hi"}],
+                        },
+                    )
+                elif ch.provider == "openai":
+                    resp = await client.post(
+                        "/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {upstream_key}"},
+                        json={
+                            "model": model_id,
+                            "max_tokens": 1,
+                            "messages": [{"role": "user", "content": "hi"}],
+                        },
+                    )
+                elif ch.provider == "google":
+                    base = str(client.base_url).rstrip("/")
+                    path = "/chat/completions" if base.endswith("/openai") else "/v1beta/openai/chat/completions"
+                    resp = await client.post(
+                        path,
+                        headers={"Authorization": f"Bearer {upstream_key}"},
+                        json={
+                            "model": model_id,
+                            "max_tokens": 1,
+                            "messages": [{"role": "user", "content": "hi"}],
+                        },
+                    )
+                else:
+                    console.print(f"[red]✗[/] Unknown provider: {ch.provider}")
+                    raise typer.Exit(4)
+            except httpx.HTTPError as exc:
+                console.print(f"[red]✗[/] Network error: {exc}")
+                async with SessionLocal() as db:
+                    await record_audit(
+                        db, actor="admin-cli", action="channel.test",
+                        target=str(id_),
+                        payload={"result": "network_error", "error": str(exc)},
+                    )
+                    await db.commit()
+                raise typer.Exit(5)
+
+        result_summary = {
+            "status": resp.status_code,
+            "ok": 200 <= resp.status_code < 300,
+        }
+        async with SessionLocal() as db:
+            await record_audit(
+                db, actor="admin-cli", action="channel.test", target=str(id_),
+                payload=result_summary,
+            )
+            await db.commit()
+
+        if resp.status_code < 300:
+            console.print(
+                f"[green]✓[/] Channel {id_} ({ch.provider}/{ch.name}) is healthy. "
+                f"HTTP {resp.status_code}, model {model_id}."
+            )
+        else:
+            try:
+                body = resp.json()
+            except Exception:
+                body = resp.text[:500]
+            console.print(
+                f"[red]✗[/] Channel {id_} returned HTTP {resp.status_code}\n"
+                f"  Body: {body}"
+            )
+            raise typer.Exit(6)
 
     _run(_go())
 
@@ -359,6 +499,9 @@ def channel_disable(id_: Annotated[int, typer.Option("--id")]) -> None:
                 console.print(f"[red]✗[/] Channel {id_} not found")
                 raise typer.Exit(1)
             ch.enabled = False
+            await record_audit(
+                db, actor="admin-cli", action="channel.disable", target=str(id_)
+            )
             await db.commit()
             console.print(f"[yellow]✓[/] Channel {id_} disabled")
 
@@ -504,10 +647,56 @@ def payment_mark_paid(id_: Annotated[int, typer.Option("--id")]) -> None:
                 description=f"Payment #{p.id} marked paid via {p.channel}",
             ))
             await db.commit()
+            await record_audit(
+                db, actor="admin-cli", action="payment.mark_paid", target=str(id_),
+                payload={"user_id": u.id, "credited_usd": p.credited_micro_cents / 100_000_000},
+            )
+            await db.commit()
             console.print(
                 f"[green]✓[/] Payment {id_} paid; "
                 f"user {u.id} balance now {_micro_cents_to_usd_str(u.balance_micro_cents)}"
             )
+
+    _run(_go())
+
+
+# =============================================================================
+# audit subcommands
+# =============================================================================
+
+
+@audit_app.command("list")
+def audit_list(
+    since: Annotated[
+        str | None, typer.Option(help="ISO date e.g. 2026-05-01")
+    ] = None,
+    limit: Annotated[int, typer.Option()] = 50,
+    actor: Annotated[str | None, typer.Option(help="Filter by actor")] = None,
+    action: Annotated[str | None, typer.Option(help="Filter by action prefix, e.g. 'channel.'")] = None,
+) -> None:
+    async def _go():
+        async with SessionLocal() as db:
+            stmt = select(AuditLog).order_by(AuditLog.id.desc()).limit(limit)
+            if since:
+                since_dt = datetime.fromisoformat(since)
+                stmt = stmt.where(AuditLog.created_at >= since_dt)
+            if actor:
+                stmt = stmt.where(AuditLog.actor == actor)
+            if action:
+                stmt = stmt.where(AuditLog.action.like(f"{action}%"))
+            rows = (await db.execute(stmt)).scalars().all()
+
+            tbl = Table("Time", "Actor", "Action", "Target", "Payload")
+            for log in rows:
+                payload_text = log.payload[:80] + "…" if log.payload and len(log.payload) > 80 else (log.payload or "")
+                tbl.add_row(
+                    log.created_at.isoformat()[:19],
+                    log.actor,
+                    log.action,
+                    log.target or "-",
+                    payload_text,
+                )
+            console.print(tbl)
 
     _run(_go())
 

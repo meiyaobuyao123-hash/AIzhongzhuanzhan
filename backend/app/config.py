@@ -41,6 +41,34 @@ class Settings(BaseSettings):
     topup_fee_basis_points: int = 5
     """5 bps = 0.05% = 万分之五"""
 
+    # Redis
+    redis_url: str = "redis://127.0.0.1:6379/0"
+
+    # JWT
+    jwt_secret: str = "change-me-in-production"
+    jwt_ttl_days: int = 30
+
+    # Rate limit tiers (RPM)
+    rpm_tier_lt_50: int = 60
+    rpm_tier_lt_500: int = 240
+    rpm_tier_lt_5000: int = 600
+    rpm_tier_ge_5000: int = 1200
+
+    # OAuth (empty = provider disabled)
+    oauth_github_client_id: str = ""
+    oauth_github_client_secret: str = ""
+    oauth_google_client_id: str = ""
+    oauth_google_client_secret: str = ""
+    oauth_redirect_base: str = "https://www.ai100trading.cn/suanli-api"
+
+    # SMTP (empty = verification logs to journal)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "Prism <noreply@ai100trading.cn>"
+    frontend_base: str = "https://www.ai100trading.cn"
+
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")

@@ -1,7 +1,8 @@
 """Shared pytest fixtures.
 
-We override the database to a per-test-process in-memory SQLite, and override
-settings before importing app modules.
+We override the database to a per-test-process in-memory SQLite, override
+settings before importing app modules, and patch the Redis singleton with
+fakeredis so tests never touch a real Redis.
 """
 
 from __future__ import annotations
@@ -16,6 +17,21 @@ import pytest_asyncio
 os.environ["PRISM_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["PRISM_MASTER_KEY_HEX"] = "0" * 63 + "1"  # 32 bytes, deterministic
 os.environ["PRISM_DEBUG"] = "false"
+os.environ["PRISM_JWT_SECRET"] = "test-jwt-secret-do-not-use-in-prod"
+
+
+@pytest.fixture(autouse=True)
+def _patch_redis_with_fakeredis(monkeypatch):
+    """Replace the Redis singleton with fakeredis so tests never connect to real Redis."""
+    import fakeredis.aioredis
+
+    fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    from app import redis_client
+
+    monkeypatch.setattr(redis_client, "_redis", fake, raising=False)
+    yield
+    # Note: we don't aclose() the fake here — fakeredis instance is per-test,
+    # and aclose is async; teardown via monkeypatch reverts the singleton.
 
 
 @pytest_asyncio.fixture

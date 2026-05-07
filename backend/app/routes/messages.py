@@ -32,7 +32,9 @@ from app.errors import (
     UpstreamError,
     error_response,
 )
+from app.limits import check_rpm_limit, default_rpm_for_user
 from app.providers import make_provider
+from app.redis_client import get_redis
 from app.routing import find_model, route
 from app.schemas.common import StreamingState, Usage
 from app.streaming import stream_with_usage
@@ -58,6 +60,15 @@ async def post_messages(
     try:
         raw_key = parse_authorization(authorization, x_api_key)
         user, api_key = await authenticate(raw_key, db)
+    except PrismException as exc:
+        return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
+
+    # ---- 1b. Rate limit -----------------------------------------------------
+    try:
+        rpm = api_key.rate_limit_rpm or default_rpm_for_user(
+            user.total_topped_up_micro_cents, user.tier
+        )
+        await check_rpm_limit(api_key.id, rpm, get_redis())
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 

@@ -62,6 +62,11 @@ class User(Base):
         BigInteger, nullable=False, default=0
     )
 
+    # v0.2 additions
+    email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    display_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -183,6 +188,15 @@ class Channel(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # v0.2: surface region + data policy in request detail panel ("渠道明牌")
+    region: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    policy_no_training: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    policy_log_retention_days: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=30
+    )
+
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
@@ -244,6 +258,10 @@ class UsageLog(Base):
     ttft_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_streaming: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     client_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # v0.2: track router retries for the request-detail panel
+    attempt_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tried_channels: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow, index=True
@@ -363,3 +381,87 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow, index=True
     )
+
+
+# =============================================================================
+# v0.2: oauth_accounts (GitHub / Google federated identities)
+# =============================================================================
+
+
+class OAuthAccount(Base):
+    __tablename__ = "oauth_accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    provider: Mapped[str] = mapped_column(String(16), nullable=False)
+    provider_uid: Mapped[str] = mapped_column(String(128), nullable=False)
+    provider_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    access_token_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "provider IN ('github','google')", name="ck_oauth_provider"
+        ),
+        Index("idx_oauth_user", "user_id"),
+        Index("uq_oauth_provider_uid", "provider", "provider_uid", unique=True),
+    )
+
+
+# =============================================================================
+# v0.2: email_verifications (email-confirm tokens)
+# =============================================================================
+
+
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    __table_args__ = (Index("idx_email_verif_user", "user_id"),)
+
+
+# =============================================================================
+# v0.2: sessions (JWT jti registry; supports active logout)
+# =============================================================================
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    jti: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    __table_args__ = (Index("idx_sessions_user_revoked", "user_id", "revoked_at"),)
