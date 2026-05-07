@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>注册 · Prism</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/suanli/tokens.css"/>
+  <link rel="stylesheet" href="/suanli/styles.css"/>
+  <link rel="stylesheet" href="/suanli/auth-pages.css"/>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="/suanli/api-client.js"></script>
+  <script type="text/babel">
+const { useState } = React;
+
+function SignupPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(null); // {email} after success
+  const [error, setError] = useState('');
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setError('');
+    if (password !== confirm) { setError('两次输入的密码不一致'); return; }
+    if (password.length < 10) { setError('密码至少 10 位'); return; }
+    setLoading(true);
+    try {
+      const data = await PrismAPI.post('/auth/register', { email, password }, { requireAuth: false });
+      setSubmitted(data);
+    } catch (err) {
+      setError(err.message || '注册失败');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="auth-shell">
+        <BrandSide/>
+        <div className="auth-form">
+          <h1 className="display">查收验证邮件</h1>
+          <p className="auth-sub">我们已向 <strong>{submitted.email}</strong> 发送了验证链接，
+            点击链接完成验证后即可登录。链接 24 小时内有效。</p>
+          <p className="auth-mini mono">如未收到，检查垃圾邮件，或联系运营。</p>
+          <a href="/login" className="cta-ghost auth-back">返回登录</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="auth-shell">
+      <BrandSide/>
+      <form className="auth-form" onSubmit={onSubmit}>
+        <h1 className="display">创建你的 Prism 账号</h1>
+        <p className="auth-sub">充值即用 · 万 5 手续费 · 0% 加价</p>
+
+        <label className="auth-label">邮箱</label>
+        <input className="auth-input" type="email" required value={email}
+          onChange={e => setEmail(e.target.value)} placeholder="dev@example.com"/>
+
+        <label className="auth-label">密码</label>
+        <input className="auth-input" type="password" required minLength={10} value={password}
+          onChange={e => setPassword(e.target.value)} placeholder="至少 10 位"/>
+
+        <label className="auth-label">再次输入密码</label>
+        <input className="auth-input" type="password" required value={confirm}
+          onChange={e => setConfirm(e.target.value)}/>
+
+        {error && <div className="auth-error">{error}</div>}
+
+        <button className="cta-primary auth-submit" type="submit" disabled={loading}>
+          {loading ? '处理中…' : '创建账号'}
+        </button>
+
+        <OAuthButtons/>
+
+        <p className="auth-mini">
+          已有账号？<a href="/login">登录</a>
+          ·
+          <a href="/suanli/">回首页</a>
+        </p>
+      </form>
+    </div>
+  );
+}
+
+function OAuthButtons() {
+  const [providers, setProviders] = useState([]);
+  React.useEffect(() => {
+    fetch('/suanli-api/auth/oauth/providers').then(r => r.json()).then(d => {
+      setProviders((d.data || []).filter(p => p.configured));
+    }).catch(() => {});
+  }, []);
+
+  if (!providers.length) return null;
+  return (
+    <div className="auth-oauth">
+      <div className="auth-divider"><span>或</span></div>
+      {providers.map(p => (
+        <a key={p.name} className="cta-ghost auth-oauth-btn"
+           href={`/suanli-api/auth/oauth/${p.name}/authorize`}>
+          {p.name === 'github' ? '使用 GitHub 继续' : '使用 Google 继续'}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function BrandSide() {
+  return (
+    <div className="auth-brand">
+      <div className="brand-prism" aria-hidden="true">
+        <svg viewBox="0 0 200 200" width="180" height="180">
+          <defs>
+            <linearGradient id="bp" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#8B5CF6"/>
+              <stop offset="50%" stopColor="#06B6D4"/>
+              <stop offset="100%" stopColor="#EC4899"/>
+            </linearGradient>
+          </defs>
+          <polygon points="100,30 175,160 25,160" fill="url(#bp)" opacity="0.6"
+            stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <div className="brand-tagline">
+        <h2 className="display">Prism</h2>
+        <p>200+ 模型 · 一个 Key</p>
+        <p className="mono">cost = price · always</p>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<SignupPage/>);
+  </script>
+</body>
+</html>

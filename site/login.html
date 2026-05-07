@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>登录 · Prism</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/suanli/tokens.css"/>
+  <link rel="stylesheet" href="/suanli/styles.css"/>
+  <link rel="stylesheet" href="/suanli/auth-pages.css"/>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="/suanli/api-client.js"></script>
+  <script type="text/babel">
+const { useState } = React;
+
+function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // If already logged in, redirect
+  React.useEffect(() => {
+    if (PrismAPI.isLoggedIn()) {
+      const next = new URLSearchParams(location.search).get('next') || '/console';
+      location.href = next;
+    }
+  }, []);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const data = await PrismAPI.post('/auth/login', { email, password }, { requireAuth: false });
+      PrismAPI.setToken(data.token, data.expires_at);
+      const next = new URLSearchParams(location.search).get('next') || '/console';
+      location.href = next;
+    } catch (err) {
+      setError(err.data?.error?.message || err.message || '登录失败');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="auth-shell">
+      <div className="auth-brand">
+        <div className="brand-prism" aria-hidden="true">
+          <svg viewBox="0 0 200 200" width="180" height="180">
+            <defs>
+              <linearGradient id="bp" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#8B5CF6"/>
+                <stop offset="50%" stopColor="#06B6D4"/>
+                <stop offset="100%" stopColor="#EC4899"/>
+              </linearGradient>
+            </defs>
+            <polygon points="100,30 175,160 25,160" fill="url(#bp)" opacity="0.6"
+              stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <div className="brand-tagline">
+          <h2 className="display">Prism</h2>
+          <p>欢迎回来</p>
+          <p className="mono">cost = price · always</p>
+        </div>
+      </div>
+
+      <form className="auth-form" onSubmit={onSubmit}>
+        <h1 className="display">登录</h1>
+
+        <label className="auth-label">邮箱</label>
+        <input className="auth-input" type="email" required value={email}
+          onChange={e => setEmail(e.target.value)} placeholder="dev@example.com"/>
+
+        <label className="auth-label">密码</label>
+        <input className="auth-input" type="password" required value={password}
+          onChange={e => setPassword(e.target.value)}/>
+
+        {error && <div className="auth-error">{error}</div>}
+
+        <button className="cta-primary auth-submit" type="submit" disabled={loading}>
+          {loading ? '登录中…' : '登录'}
+        </button>
+
+        <OAuthButtons/>
+
+        <p className="auth-mini">
+          还没账号？<a href="/signup">注册</a>
+          ·
+          <a href="/suanli/">回首页</a>
+        </p>
+      </form>
+    </div>
+  );
+}
+
+function OAuthButtons() {
+  const [providers, setProviders] = useState([]);
+  React.useEffect(() => {
+    fetch('/suanli-api/auth/oauth/providers').then(r => r.json()).then(d => {
+      setProviders((d.data || []).filter(p => p.configured));
+    }).catch(() => {});
+  }, []);
+
+  if (!providers.length) return null;
+  return (
+    <div className="auth-oauth">
+      <div className="auth-divider"><span>或</span></div>
+      {providers.map(p => (
+        <a key={p.name} className="cta-ghost auth-oauth-btn"
+           href={`/suanli-api/auth/oauth/${p.name}/authorize`}>
+          {p.name === 'github' ? '使用 GitHub 继续' : '使用 Google 继续'}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<LoginPage/>);
+  </script>
+</body>
+</html>
