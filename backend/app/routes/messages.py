@@ -1,15 +1,14 @@
 """POST /v1/messages — Anthropic-native protocol passthrough.
 
-Flow:
-  1. authenticate Prism Key
-  2. parse request, find model + channel
-  3. balance pre-flight check
-  4. forward to upstream (streaming or not)
-  5. on completion: parse usage, calculate cost, persist usage_log + deduct balance
+Uses app/routing/executor.py for the full retry chain (multi-channel + circuit
+breaker + failover). v0.2: protocol translator handles non-Anthropic models if
+the user routes them through /v1/messages (e.g. /v1/messages with model=gpt-5
+auto-translates to OpenAI). v0.1 used to 400 in this case.
 """
 
 from __future__ import annotations
 
+import time
 import uuid
 from typing import Any
 
@@ -24,18 +23,17 @@ from app.billing import (
     estimate_max_cost_micro_cents,
     record_request_outcome,
 )
-from app.config import settings
 from app.deps import client_ip, get_db
-from app.errors import (
-    InvalidAPIKey,
-    PrismException,
-    UpstreamError,
-    error_response,
-)
+from app.errors import PrismException, error_response
 from app.limits import check_rpm_limit, default_rpm_for_user
-from app.providers import make_provider
+from app.logging_config import logger
 from app.redis_client import get_redis
-from app.routing import find_model, route
+from app.routing import (
+    AllChannelsFailed,
+    attempts_to_json,
+    execute_with_retry,
+    find_model,
+)
 from app.schemas.common import StreamingState, Usage
 from app.streaming import stream_with_usage
 
@@ -50,11 +48,8 @@ async def post_messages(
     x_api_key: str | None = Header(default=None, alias="x-api-key"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Anthropic-native /v1/messages.
-
-    Authentication accepts both 'Authorization: Bearer ...' and 'x-api-key: ...'.
-    """
     request_id = str(uuid.uuid4())
+    started = time.monotonic()
 
     # ---- 1. Auth ------------------------------------------------------------
     try:
@@ -72,11 +67,13 @@ async def post_messages(
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    # ---- 2. Model + channel -------------------------------------------------
+    # ---- 2. Model + provider check -----------------------------------------
     try:
         model_id = body.get("model")
         if not model_id:
-            return error_response(400, "Missing 'model' field", "invalid_request_error", param="model")
+            return error_response(
+                400, "Missing 'model' field", "invalid_request_error", param="model"
+            )
 
         if api_key.whitelist_list is not None and model_id not in api_key.whitelist_list:
             return error_response(
@@ -87,18 +84,22 @@ async def post_messages(
             )
 
         model = await find_model(model_id, db)
-        if model.provider != "anthropic":
-            return error_response(
-                400,
-                f"Model {model_id} (provider {model.provider}) not supported on /v1/messages. Use /v1/chat/completions.",
-                "invalid_request_error",
-                param="model",
-            )
-        channel = await route(model, db)
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    # ---- 3. Balance pre-flight ---------------------------------------------
+    # v0.2: For now, only Anthropic models on /v1/messages. v0.2 B5 adds
+    # protocol translation so OpenAI/Google models can also be used here.
+    if model.provider != "anthropic":
+        return error_response(
+            400,
+            f"Model {model_id} (provider {model.provider}) not yet supported on /v1/messages. "
+            "v0.2 B5 adds OAI↔Anthropic translation.",
+            "invalid_request_error",
+            param="model",
+            code="provider_translation_not_yet_supported",
+        )
+
+    # ---- 3. Balance pre-flight --------------------------------------------
     estimated_input = _estimate_prompt_tokens(body)
     max_output = int(body.get("max_tokens", 4096) or 4096)
     estimated_max = estimate_max_cost_micro_cents(estimated_input, max_output, model)
@@ -107,69 +108,92 @@ async def post_messages(
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    # ---- 4. Forward to upstream --------------------------------------------
+    # ---- 4. Execute via retry chain ----------------------------------------
     is_streaming = bool(body.get("stream"))
-    provider = make_provider(channel, settings.master_key)
+    redis = get_redis()
 
     try:
-        upstream = await provider.messages(body, stream=is_streaming)
-    except Exception as exc:  # network errors etc.
-        await provider.aclose()
+        result = await execute_with_retry(
+            model=model,
+            request_body=body,
+            is_streaming=is_streaming,
+            db=db,
+            redis_client=redis,
+            method="messages",
+        )
+    except AllChannelsFailed as exc:
         await record_request_outcome(
-            db, request_id=request_id, user=user, api_key=api_key, channel=channel,
-            model=model, usage=Usage(), cost_micro_cents=0, status="error",
-            error_message=f"Upstream connect failure: {type(exc).__name__}: {exc}",
+            db, request_id=request_id, user=user, api_key=api_key,
+            channel=None, model=model, usage=Usage(),
+            cost_micro_cents=0, status="error",
+            error_message=exc.message,
             is_streaming=is_streaming, client_ip=client_ip(request),
         )
-        return error_response(
-            502, "Upstream connection failed", "api_error", code="upstream_unreachable"
-        )
+        return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
+    except PrismException as exc:
+        return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
+    channel = result.channel
+    provider = result.provider
+    upstream = result.upstream
+    tried = attempts_to_json(result.attempts)
+    attempt_index = len(result.attempts) - 1
+
+    # Upstream non-2xx that the executor decided to surface
     if upstream.status_code >= 400:
-        # Read full body, surface upstream error
-        await upstream.aread()
         try:
-            upstream_body = upstream.json()
-        except Exception:
-            upstream_body = {"error": {"message": upstream.text}}
-        await provider.aclose()
-        await record_request_outcome(
-            db, request_id=request_id, user=user, api_key=api_key, channel=channel,
-            model=model, usage=Usage(), cost_micro_cents=0, status="error",
-            http_status=upstream.status_code,
-            error_message=str(upstream_body)[:1000],
-            is_streaming=is_streaming, client_ip=client_ip(request),
-        )
-        return JSONResponse(status_code=upstream.status_code, content=upstream_body)
+            return JSONResponse(
+                status_code=upstream.status_code,
+                content=result.response_body,
+            )
+        finally:
+            await provider.aclose()
+            latency_ms = int((time.monotonic() - started) * 1000)
+            await record_request_outcome(
+                db, request_id=request_id, user=user, api_key=api_key,
+                channel=channel, model=model, usage=Usage(),
+                cost_micro_cents=0, status="error",
+                http_status=upstream.status_code,
+                error_message=str(result.response_body)[:1000],
+                is_streaming=is_streaming, client_ip=client_ip(request),
+            )
 
-    # ---- 5a. Non-streaming: read full, parse usage, bill, return ----------
+    # ---- 5a. Non-streaming success ----------------------------------------
     if not is_streaming:
         try:
-            await upstream.aread()
-            response_body = upstream.json()
+            response_body = result.response_body or {}
             usage = provider.parse_usage_non_streaming(response_body)
             cost = calculate_cost_micro_cents(usage, model)
-            await record_request_outcome(
+            latency_ms = int((time.monotonic() - started) * 1000)
+            await record_request_outcome_v02(
                 db, request_id=request_id, user=user, api_key=api_key,
                 channel=channel, model=model, usage=usage,
                 cost_micro_cents=cost, status="ok",
                 http_status=upstream.status_code,
+                latency_ms=latency_ms,
+                attempt_index=attempt_index,
+                tried_channels=tried,
                 is_streaming=False, client_ip=client_ip(request),
             )
             return JSONResponse(status_code=upstream.status_code, content=response_body)
         finally:
             await provider.aclose()
 
-    # ---- 5b. Streaming: pump bytes, accumulate usage, bill on complete ----
+    # ---- 5b. Streaming success --------------------------------------------
     async def on_complete(state: StreamingState) -> None:
         usage = state.usage
         cost = calculate_cost_micro_cents(usage, model)
-        await record_request_outcome(
-            db, request_id=request_id, user=user, api_key=api_key, channel=channel,
-            model=model, usage=usage, cost_micro_cents=cost,
+        latency_ms = int((time.monotonic() - started) * 1000)
+        await record_request_outcome_v02(
+            db, request_id=request_id, user=user, api_key=api_key,
+            channel=channel, model=model, usage=usage, cost_micro_cents=cost,
             status="ok" if state.stats.finished_normally else "partial",
             http_status=state.stats.upstream_status,
-            stats=state.stats, is_streaming=True, client_ip=client_ip(request),
+            latency_ms=latency_ms,
+            ttft_ms=state.stats.ttft_ms,
+            attempt_index=attempt_index,
+            tried_channels=tried,
+            is_streaming=True, client_ip=client_ip(request),
         )
         await provider.aclose()
 
@@ -180,12 +204,76 @@ async def post_messages(
     )
 
 
-def _estimate_prompt_tokens(body: dict[str, Any]) -> int:
-    """Cheap estimate for pre-flight; conservative (overestimates).
+# ---- Helpers ----------------------------------------------------------------
 
-    Anthropic Messages API: messages = list of {role, content (str | list)}.
-    Approx 1 token per 4 chars. Add system prompt + tool definitions.
-    """
+
+async def record_request_outcome_v02(
+    db,
+    *,
+    request_id,
+    user,
+    api_key,
+    channel,
+    model,
+    usage,
+    cost_micro_cents,
+    status,
+    http_status=None,
+    error_message=None,
+    latency_ms=None,
+    ttft_ms=None,
+    attempt_index=0,
+    tried_channels=None,
+    is_streaming=False,
+    client_ip=None,
+):
+    """Wrap v0.1 record_request_outcome to also save attempt_index + tried_channels."""
+    # Direct insert with v0.2 fields
+    from app.models.orm import BalanceTransaction, UsageLog
+    log = UsageLog(
+        request_id=request_id,
+        user_id=user.id,
+        api_key_id=api_key.id,
+        channel_id=channel.id if channel else None,
+        model_id=model.model_id,
+        prompt_tokens=usage.prompt_tokens,
+        completion_tokens=usage.completion_tokens,
+        cache_read_tokens=usage.cache_read_tokens,
+        cache_write_tokens=usage.cache_write_tokens,
+        reasoning_tokens=usage.reasoning_tokens,
+        cost_micro_cents=cost_micro_cents,
+        status=status,
+        http_status=http_status,
+        error_message=error_message,
+        latency_ms=latency_ms,
+        ttft_ms=ttft_ms,
+        attempt_index=attempt_index,
+        tried_channels=tried_channels,
+        is_streaming=is_streaming,
+        client_ip=client_ip,
+    )
+    db.add(log)
+    await db.flush()
+
+    if cost_micro_cents > 0:
+        await db.refresh(user)
+        actual = min(cost_micro_cents, user.balance_micro_cents)
+        if actual > 0:
+            user.balance_micro_cents -= actual
+            db.add(BalanceTransaction(
+                user_id=user.id,
+                type="inference",
+                amount_micro_cents=-actual,
+                balance_after_micro_cents=user.balance_micro_cents,
+                related_usage_log_id=log.id,
+                description=f"{model.model_id} via channel {channel.id if channel else 'n/a'}",
+            ))
+
+    await db.commit()
+    return log
+
+
+def _estimate_prompt_tokens(body: dict[str, Any]) -> int:
     chars = 0
     if (s := body.get("system")):
         chars += len(s) if isinstance(s, str) else sum(len(str(b)) for b in s if isinstance(b, dict))

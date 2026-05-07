@@ -1,14 +1,13 @@
-"""POST /v1/chat/completions — OpenAI-compatible (also accepts Gemini models).
+"""POST /v1/chat/completions — OpenAI-compatible (also serves Gemini).
 
-Same pipeline as /v1/messages but for the OpenAI dialect. Routes to either the
-OpenAIProvider or GoogleProvider based on the resolved model's `provider` field.
-
-For Anthropic models: v0.1 returns 400 "use /v1/messages instead". v0.2 will
-add OpenAI↔Anthropic protocol translation.
+Uses app/routing/executor.py for retry + circuit breaker. v0.2 supports OpenAI +
+Google via direct passthrough; Anthropic models on this endpoint will be enabled
+in v0.2 B5 via protocol translator.
 """
 
 from __future__ import annotations
 
+import time
 import uuid
 from typing import Any
 
@@ -21,15 +20,18 @@ from app.billing import (
     calculate_cost_micro_cents,
     check_balance_or_402,
     estimate_max_cost_micro_cents,
-    record_request_outcome,
 )
-from app.config import settings
 from app.deps import client_ip, get_db
 from app.errors import PrismException, error_response
 from app.limits import check_rpm_limit, default_rpm_for_user
-from app.providers import make_provider
 from app.redis_client import get_redis
-from app.routing import find_model, route
+from app.routes.messages import record_request_outcome_v02
+from app.routing import (
+    AllChannelsFailed,
+    attempts_to_json,
+    execute_with_retry,
+    find_model,
+)
 from app.schemas.common import StreamingState, Usage
 from app.streaming import stream_with_usage
 
@@ -45,6 +47,7 @@ async def post_chat_completions(
     db: AsyncSession = Depends(get_db),
 ):
     request_id = str(uuid.uuid4())
+    started = time.monotonic()
 
     # ---- 1. Auth ------------------------------------------------------------
     try:
@@ -62,11 +65,13 @@ async def post_chat_completions(
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    # ---- 2. Model + channel -------------------------------------------------
+    # ---- 2. Model lookup ---------------------------------------------------
     try:
         model_id = body.get("model")
         if not model_id:
-            return error_response(400, "Missing 'model' field", "invalid_request_error", param="model")
+            return error_response(
+                400, "Missing 'model' field", "invalid_request_error", param="model"
+            )
 
         if api_key.whitelist_list is not None and model_id not in api_key.whitelist_list:
             return error_response(
@@ -77,19 +82,20 @@ async def post_chat_completions(
             )
 
         model = await find_model(model_id, db)
-        if model.provider == "anthropic":
-            return error_response(
-                400,
-                f"Anthropic model {model_id} should use /v1/messages, not /v1/chat/completions. "
-                "(OpenAI↔Anthropic protocol translation lands in v0.2.)",
-                "invalid_request_error",
-                param="model",
-            )
-        channel = await route(model, db)
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    # ---- 3. Balance pre-flight ---------------------------------------------
+    if model.provider == "anthropic":
+        return error_response(
+            400,
+            f"Anthropic model {model_id} should use /v1/messages until v0.2 B5 "
+            "adds OAI↔Anthropic translation.",
+            "invalid_request_error",
+            param="model",
+            code="provider_translation_not_yet_supported",
+        )
+
+    # ---- 3. Balance pre-flight --------------------------------------------
     estimated_input = _estimate_prompt_tokens(body)
     max_output = int(body.get("max_tokens") or body.get("max_completion_tokens") or 4096)
     estimated_max = estimate_max_cost_micro_cents(estimated_input, max_output, model)
@@ -98,68 +104,92 @@ async def post_chat_completions(
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    # ---- 4. Forward --------------------------------------------------------
+    # ---- 4. Execute via retry chain ----------------------------------------
     is_streaming = bool(body.get("stream"))
-    provider = make_provider(channel, settings.master_key)
+    redis = get_redis()
 
     try:
-        upstream = await provider.chat_completions(body, stream=is_streaming)
-    except Exception as exc:
-        await provider.aclose()
-        await record_request_outcome(
-            db, request_id=request_id, user=user, api_key=api_key, channel=channel,
-            model=model, usage=Usage(), cost_micro_cents=0, status="error",
-            error_message=f"Upstream connect failure: {type(exc).__name__}: {exc}",
+        result = await execute_with_retry(
+            model=model,
+            request_body=body,
+            is_streaming=is_streaming,
+            db=db,
+            redis_client=redis,
+            method="chat_completions",
+        )
+    except AllChannelsFailed as exc:
+        await record_request_outcome_v02(
+            db, request_id=request_id, user=user, api_key=api_key,
+            channel=None, model=model, usage=Usage(),
+            cost_micro_cents=0, status="error",
+            error_message=exc.message,
             is_streaming=is_streaming, client_ip=client_ip(request),
         )
-        return error_response(
-            502, "Upstream connection failed", "api_error", code="upstream_unreachable"
-        )
+        return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
+    except PrismException as exc:
+        return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
+
+    channel = result.channel
+    provider = result.provider
+    upstream = result.upstream
+    tried = attempts_to_json(result.attempts)
+    attempt_index = len(result.attempts) - 1
 
     if upstream.status_code >= 400:
-        await upstream.aread()
         try:
-            upstream_body = upstream.json()
-        except Exception:
-            upstream_body = {"error": {"message": upstream.text}}
-        await provider.aclose()
-        await record_request_outcome(
-            db, request_id=request_id, user=user, api_key=api_key, channel=channel,
-            model=model, usage=Usage(), cost_micro_cents=0, status="error",
-            http_status=upstream.status_code,
-            error_message=str(upstream_body)[:1000],
-            is_streaming=is_streaming, client_ip=client_ip(request),
-        )
-        return JSONResponse(status_code=upstream.status_code, content=upstream_body)
+            return JSONResponse(
+                status_code=upstream.status_code,
+                content=result.response_body,
+            )
+        finally:
+            await provider.aclose()
+            latency_ms = int((time.monotonic() - started) * 1000)
+            await record_request_outcome_v02(
+                db, request_id=request_id, user=user, api_key=api_key,
+                channel=channel, model=model, usage=Usage(),
+                cost_micro_cents=0, status="error",
+                http_status=upstream.status_code,
+                error_message=str(result.response_body)[:1000],
+                latency_ms=latency_ms,
+                attempt_index=attempt_index,
+                tried_channels=tried,
+                is_streaming=is_streaming, client_ip=client_ip(request),
+            )
 
-    # ---- 5a. Non-streaming -------------------------------------------------
     if not is_streaming:
         try:
-            await upstream.aread()
-            response_body = upstream.json()
+            response_body = result.response_body or {}
             usage = provider.parse_usage_non_streaming(response_body)
             cost = calculate_cost_micro_cents(usage, model)
-            await record_request_outcome(
+            latency_ms = int((time.monotonic() - started) * 1000)
+            await record_request_outcome_v02(
                 db, request_id=request_id, user=user, api_key=api_key,
                 channel=channel, model=model, usage=usage,
                 cost_micro_cents=cost, status="ok",
                 http_status=upstream.status_code,
+                latency_ms=latency_ms,
+                attempt_index=attempt_index,
+                tried_channels=tried,
                 is_streaming=False, client_ip=client_ip(request),
             )
             return JSONResponse(status_code=upstream.status_code, content=response_body)
         finally:
             await provider.aclose()
 
-    # ---- 5b. Streaming ------------------------------------------------------
     async def on_complete(state: StreamingState) -> None:
         usage = state.usage
         cost = calculate_cost_micro_cents(usage, model)
-        await record_request_outcome(
-            db, request_id=request_id, user=user, api_key=api_key, channel=channel,
-            model=model, usage=usage, cost_micro_cents=cost,
+        latency_ms = int((time.monotonic() - started) * 1000)
+        await record_request_outcome_v02(
+            db, request_id=request_id, user=user, api_key=api_key,
+            channel=channel, model=model, usage=usage, cost_micro_cents=cost,
             status="ok" if state.stats.finished_normally else "partial",
             http_status=state.stats.upstream_status,
-            stats=state.stats, is_streaming=True, client_ip=client_ip(request),
+            latency_ms=latency_ms,
+            ttft_ms=state.stats.ttft_ms,
+            attempt_index=attempt_index,
+            tried_channels=tried,
+            is_streaming=True, client_ip=client_ip(request),
         )
         await provider.aclose()
 
@@ -171,7 +201,6 @@ async def post_chat_completions(
 
 
 def _estimate_prompt_tokens(body: dict[str, Any]) -> int:
-    """OpenAI: messages = list[{role, content: str | list[{text|...}]}]."""
     chars = 0
     for m in body.get("messages") or []:
         c = m.get("content")
