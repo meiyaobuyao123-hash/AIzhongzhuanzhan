@@ -545,6 +545,7 @@ function PaymentMethods() {
     setTimeout(() => setCopied(''), 1800);
   };
 
+  const TRC_ADDR = 'TT24g41HLptouzxGycZxQKmWaTENK4K4HG';
   const SOL_ADDR = '66p5tnV6Fd7x5QmRE6X772PMVmVUVgozRzATJ4Ns9iQn';
   const EVM_ADDR = '0xC862ff9Fd79D180950E546DBB8b108d5c9c38582';
 
@@ -552,13 +553,34 @@ function PaymentMethods() {
     <div className="pay-row">
       <div className="pay-head">
         <span className="kicker mono">充值方式 · payment methods</span>
-        <h3 className="pay-title display">5 种通道 · 一律万 5 手续费</h3>
+        <h3 className="pay-title display">6 种通道 · 一律万 5 手续费</h3>
         <p className="pay-sub mono">Pay any way you want · same 0.05% fee · top up $5 minimum.</p>
       </div>
 
       <div className="pay-grid">
         <PayCard icon="alipay" title="支付宝" en="Alipay" desc="国内个人首选 · 实时到账" badge="即将开放" />
         <PayCard icon="wechat" title="微信支付" en="WeChat Pay" desc="国内个人 · 实时到账" badge="即将开放" />
+        <PayCard icon="bank" title="对公转账" en="Bank wire" desc="Team 套餐专享 · 增值税专票 · 月结" badge="Team only" />
+
+        <div className="pay-card pay-card-crypto">
+          <div className="pay-card-head">
+            <span className="pay-icon pay-icon-trc">T</span>
+            <div>
+              <div className="pay-card-title">
+                USDT (TRC20)
+                <span className="pay-card-pill">推荐</span>
+              </div>
+              <div className="pay-card-en mono">国内首选 · 链上费 ≈ $1</div>
+            </div>
+          </div>
+          <div className="pay-addr-row">
+            <code className="pay-addr mono" title={TRC_ADDR}>{TRC_ADDR}</code>
+            <button className="pay-copy mono" onClick={() => copy(TRC_ADDR, 'trc')}>
+              {copied === 'trc' ? '已复制' : '复制'}
+            </button>
+          </div>
+          <div className="pay-warn">⚠️ 仅 Tron / TRC20 网络 · 地址以 T 开头</div>
+        </div>
 
         <div className="pay-card pay-card-crypto">
           <div className="pay-card-head">
@@ -593,8 +615,6 @@ function PaymentMethods() {
           </div>
           <div className="pay-warn">推荐 BSC / Polygon · ERC20 链上费贵</div>
         </div>
-
-        <PayCard icon="bank" title="对公转账" en="Bank wire" desc="Team 套餐专享 · 增值税专票 · 月结" badge="Team only" />
       </div>
 
       <div className="pay-foot mono">

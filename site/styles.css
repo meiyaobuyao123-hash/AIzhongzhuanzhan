@@ -1446,8 +1446,8 @@ input, textarea, select { font-family: inherit; }
 }
 .pay-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
 }
 .pay-card {
   position: relative;
@@ -1491,6 +1491,11 @@ input, textarea, select { font-family: inherit; }
 .pay-icon-wechat { background: linear-gradient(135deg, #07c160, #058a45); }
 .pay-icon-bank   { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .pay-icon-stripe { background: linear-gradient(135deg, #635bff, #4f48cc); }
+.pay-icon-trc {
+  background: linear-gradient(135deg, #FF060A, #C00B12);
+  font-size: 17px;
+  font-weight: 800;
+}
 .pay-icon-sol {
   background: linear-gradient(135deg, #9945FF, #14F195);
   font-size: 18px;
@@ -1498,6 +1503,20 @@ input, textarea, select { font-family: inherit; }
 .pay-icon-evm {
   background: linear-gradient(135deg, #627EEA, #3C53A8);
   font-size: 18px;
+}
+.pay-card-pill {
+  display: inline-block;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  background: var(--iridescent);
+  background-size: 200% 200%;
+  color: white;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  animation: shimmer 4s ease-in-out infinite;
 }
 .pay-card-title {
   font-size: 14px;
