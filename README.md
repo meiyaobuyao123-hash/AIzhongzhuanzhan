@@ -11,6 +11,11 @@ AI 中转站 SaaS 项目立项资料库。
 ### 调研
 - [docs/competitor-analysis.md](docs/competitor-analysis.md) — AI 中转站竞品调研（2026-05-05），覆盖 18 家玩家，从竞争格局 / 盈利模式 / 产品力 / 路由策略 4 个维度横向对比，给国内创业者落地建议。
 
+### 方案
+- [docs/prd.md](docs/prd.md) — Prism 产品需求文档（PRD v0.1）：商业模式 / 用户分层（Free/Developer/Team）/ 功能优先级（P0/P1/P2）/ MVP 范围 / 路线图 / 边界。
+- [docs/routing-strategy.md](docs/routing-strategy.md) — 路由策略设计：4 层决策逻辑 / 价格²反比加权 / 健康熔断状态机 / Prompt cache 粘性 / 容量预警 / 完整伪代码 / 与 OpenRouter / New API / LiteLLM / Portkey 横向对比。
+- [docs/upstream-onboarding.md](docs/upstream-onboarding.md) — 上游接入操作手册：Anthropic 手动 / OpenAI 半自动（Admin API） / Vertex 半自动（service account） / Bedrock 半自动（IAM） / 各家 endpoint 与配置流程。
+
 ### 设计
 - [prompts/claude-design-prompts.md](prompts/claude-design-prompts.md) — Claude design 提示词包 v1，完整多页营销站设计提示词（首页 / 模型 / 定价 / 文档 / 控制台 / 登录注册），含品牌候选（Prism / Nimbus / Mesh / Axiom / 百模）、设计系统 token、视觉风格"3D 酒店风"。
 - [prompts/models-page-v2-refined.md](prompts/models-page-v2-refined.md) — `/models` 页迭代 prompt v2，把 v1 的 OpenRouter 克隆式卡片网格重构为"按场景挑模型 + 渠道透明 banner + 紧凑表格"的内容架构，保留视觉系统不变。
