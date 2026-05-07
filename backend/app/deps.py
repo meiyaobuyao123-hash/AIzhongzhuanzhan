@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import authenticate, parse_authorization
 from app.db import SessionLocal
+from app.errors import PrismException
+from app.jwt_auth import InvalidToken, decode_token, is_session_revoked
 from app.models.orm import ApiKey, User
 
 
@@ -41,3 +43,29 @@ def client_ip(request: Request) -> str | None:
     if real:
         return real.strip()
     return request.client.host if request.client else None
+
+
+async def current_user(
+    authorization: str | None,
+    db: AsyncSession,
+) -> User:
+    """Resolve a JWT bearer token to a User. Raises if missing / invalid /
+    revoked / disabled.
+
+    Used by web-console endpoints (anything under /account, /usage)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise InvalidToken("Missing Authorization: Bearer ... header")
+    token = authorization[7:].strip()
+    payload = decode_token(token)
+    jti = payload.get("jti")
+    sub = payload.get("sub")
+    if not jti or not sub:
+        raise InvalidToken("Token payload incomplete")
+    if await is_session_revoked(jti, db):
+        from app.jwt_auth import RevokedToken
+        raise RevokedToken("Session has been revoked")
+    user = await db.get(User, int(sub))
+    if user is None or not user.enabled:
+        from app.errors import UserDisabled
+        raise UserDisabled("User account no longer active")
+    return user
