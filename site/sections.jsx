@@ -531,7 +531,97 @@ function PricingPreview() {
           充值时另收 <code>0.05%</code> 手续费（充 1 万到账 9995）。每条请求扣费写进 <code>usage_logs</code>，月底可下载对账 CSV。
         </div>
       </div>
+
+      <PaymentMethods />
     </section>
+  );
+}
+
+function PaymentMethods() {
+  const [copied, setCopied] = useStateS('');
+  const copy = (text, label) => {
+    navigator.clipboard?.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(''), 1800);
+  };
+
+  const SOL_ADDR = '66p5tnV6Fd7x5QmRE6X772PMVmVUVgozRzATJ4Ns9iQn';
+  const EVM_ADDR = '0xC862ff9Fd79D180950E546DBB8b108d5c9c38582';
+
+  return (
+    <div className="pay-row">
+      <div className="pay-head">
+        <span className="kicker mono">充值方式 · payment methods</span>
+        <h3 className="pay-title display">5 种通道 · 一律万 5 手续费</h3>
+        <p className="pay-sub mono">Pay any way you want · same 0.05% fee · top up $5 minimum.</p>
+      </div>
+
+      <div className="pay-grid">
+        <PayCard icon="alipay" title="支付宝" en="Alipay" desc="国内个人首选 · 实时到账" badge="即将开放" />
+        <PayCard icon="wechat" title="微信支付" en="WeChat Pay" desc="国内个人 · 实时到账" badge="即将开放" />
+
+        <div className="pay-card pay-card-crypto">
+          <div className="pay-card-head">
+            <span className="pay-icon pay-icon-sol">◎</span>
+            <div>
+              <div className="pay-card-title">USDT (Solana)</div>
+              <div className="pay-card-en mono">USDT-SPL · ~$0.001 链上费</div>
+            </div>
+          </div>
+          <div className="pay-addr-row">
+            <code className="pay-addr mono" title={SOL_ADDR}>{SOL_ADDR}</code>
+            <button className="pay-copy mono" onClick={() => copy(SOL_ADDR, 'sol')}>
+              {copied === 'sol' ? '已复制' : '复制'}
+            </button>
+          </div>
+          <div className="pay-warn">⚠️ 仅 Solana 网络 · 用错网络资金丢失</div>
+        </div>
+
+        <div className="pay-card pay-card-crypto">
+          <div className="pay-card-head">
+            <span className="pay-icon pay-icon-evm">⬢</span>
+            <div>
+              <div className="pay-card-title">USDT (EVM)</div>
+              <div className="pay-card-en mono">BSC / Polygon / Arbitrum / ERC20</div>
+            </div>
+          </div>
+          <div className="pay-addr-row">
+            <code className="pay-addr mono" title={EVM_ADDR}>{EVM_ADDR}</code>
+            <button className="pay-copy mono" onClick={() => copy(EVM_ADDR, 'evm')}>
+              {copied === 'evm' ? '已复制' : '复制'}
+            </button>
+          </div>
+          <div className="pay-warn">推荐 BSC / Polygon · ERC20 链上费贵</div>
+        </div>
+
+        <PayCard icon="bank" title="对公转账" en="Bank wire" desc="Team 套餐专享 · 增值税专票 · 月结" badge="Team only" />
+      </div>
+
+      <div className="pay-foot mono">
+        最低 $5 起充 · 余额永不过期 · 7 天无理由退款 · 详见 <a href="https://github.com/meiyaobuyao123-hash/AIzhongzhuanzhan/blob/main/docs/payment-methods.md" target="_blank" rel="noreferrer">支付方式文档</a>
+      </div>
+    </div>
+  );
+}
+
+function PayCard({ icon, title, en, desc, badge }) {
+  return (
+    <div className="pay-card">
+      <div className="pay-card-head">
+        <span className={`pay-icon pay-icon-${icon}`}>
+          {icon === 'alipay' && '支'}
+          {icon === 'wechat' && '微'}
+          {icon === 'bank' && '银'}
+          {icon === 'stripe' && 'S'}
+        </span>
+        <div>
+          <div className="pay-card-title">{title}</div>
+          <div className="pay-card-en mono">{en}</div>
+        </div>
+      </div>
+      <div className="pay-card-desc">{desc}</div>
+      {badge && <div className="pay-badge">{badge}</div>}
+    </div>
   );
 }
 

@@ -1424,6 +1424,163 @@ input, textarea, select { font-family: inherit; }
   font-size: 11px;
 }
 
+/* ── Payment methods row ─────────────────────────────── */
+.pay-row {
+  margin-top: 32px;
+  background: rgba(11,11,31,0.55);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  padding: 28px;
+}
+.pay-head { margin-bottom: 18px; }
+.pay-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 4px 0 4px;
+  color: var(--text-primary);
+}
+.pay-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.pay-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.pay-card {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 200ms var(--ease-out);
+  min-height: 120px;
+}
+.pay-card:hover {
+  border-color: rgba(139,92,246,0.4);
+  transform: translateY(-2px);
+}
+.pay-card-crypto {
+  grid-column: span 1;
+  background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(6,182,212,0.06));
+  border-color: rgba(139,92,246,0.25);
+}
+.pay-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pay-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+  flex-shrink: 0;
+}
+.pay-icon-alipay { background: linear-gradient(135deg, #1677ff, #0a5fcc); }
+.pay-icon-wechat { background: linear-gradient(135deg, #07c160, #058a45); }
+.pay-icon-bank   { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.pay-icon-stripe { background: linear-gradient(135deg, #635bff, #4f48cc); }
+.pay-icon-sol {
+  background: linear-gradient(135deg, #9945FF, #14F195);
+  font-size: 18px;
+}
+.pay-icon-evm {
+  background: linear-gradient(135deg, #627EEA, #3C53A8);
+  font-size: 18px;
+}
+.pay-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  line-height: 1.2;
+}
+.pay-card-en {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.pay-card-desc {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.pay-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  color: var(--accent-amber);
+  border: 1px solid rgba(245,158,11,0.3);
+  background: rgba(245,158,11,0.08);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  width: fit-content;
+}
+.pay-addr-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.pay-addr {
+  flex: 1;
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pay-copy {
+  background: rgba(139,92,246,0.15);
+  border: 1px solid rgba(139,92,246,0.3);
+  color: #c4b5fd;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 150ms var(--ease-out);
+}
+.pay-copy:hover {
+  background: rgba(139,92,246,0.3);
+  color: var(--text-primary);
+}
+.pay-warn {
+  font-size: 10.5px;
+  color: var(--accent-amber);
+  line-height: 1.4;
+}
+.pay-foot {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.pay-foot a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+}
+.pay-foot a:hover { color: var(--text-primary); }
+
 /* ============================================================
    11. FAQ
 ============================================================ */
@@ -1617,6 +1774,7 @@ input, textarea, select { font-family: inherit; }
   .nd-grid { grid-template-columns: repeat(2, 1fr); }
   .price-grid { grid-template-columns: 1fr; }
   .pc-controls { grid-template-columns: 1fr; }
+  .pay-grid { grid-template-columns: repeat(2, 1fr); }
   .footer-inner { grid-template-columns: 1fr; }
   .footer-cols { grid-template-columns: repeat(2, 1fr); }
   .trust-inner { grid-template-columns: repeat(3, 1fr); gap: 16px 0; }
@@ -1646,4 +1804,6 @@ input, textarea, select { font-family: inherit; }
   .fcta-card { padding: 40px 24px; }
   .fcta-title { font-size: 28px; }
   .msc-stats { grid-template-columns: repeat(2, 1fr); }
+  .pay-grid { grid-template-columns: 1fr; }
+  .pay-row { padding: 20px; }
 }
