@@ -51,6 +51,18 @@ class AnthropicProvider(Provider):
         )
         return await self.client.send(request, stream=stream)
 
+    async def chat_completions(
+        self, body: dict[str, Any], *, stream: bool
+    ) -> httpx.Response:
+        """v0.2 B5: client speaks OpenAI but routes to Anthropic upstream.
+        Translate OAI request → Anthropic, forward, response will be translated
+        back to OAI format by the route handler.
+        """
+        from app.providers.translators.oai_to_anth import oai_request_to_anth
+
+        anth_body = oai_request_to_anth(body)
+        return await self.messages(anth_body, stream=stream)
+
     # ---- Usage parsing ------------------------------------------------------
 
     def parse_usage_non_streaming(self, body: dict[str, Any]) -> Usage:

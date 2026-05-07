@@ -85,15 +85,7 @@ async def post_chat_completions(
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    if model.provider == "anthropic":
-        return error_response(
-            400,
-            f"Anthropic model {model_id} should use /v1/messages until v0.2 B5 "
-            "adds OAI↔Anthropic translation.",
-            "invalid_request_error",
-            param="model",
-            code="provider_translation_not_yet_supported",
-        )
+    needs_translation = model.provider == "anthropic"
 
     # ---- 3. Balance pre-flight --------------------------------------------
     estimated_input = _estimate_prompt_tokens(body)
@@ -172,6 +164,12 @@ async def post_chat_completions(
                 tried_channels=tried,
                 is_streaming=False, client_ip=client_ip(request),
             )
+
+            # B5: if upstream was Anthropic, translate response back to OpenAI shape
+            if needs_translation:
+                from app.providers.translators.oai_to_anth import anth_response_to_oai
+                response_body = anth_response_to_oai(response_body, requested_model=model_id)
+
             return JSONResponse(status_code=upstream.status_code, content=response_body)
         finally:
             await provider.aclose()
@@ -192,6 +190,16 @@ async def post_chat_completions(
             is_streaming=True, client_ip=client_ip(request),
         )
         await provider.aclose()
+
+    if needs_translation:
+        from app.providers.translators.oai_to_anth import anth_stream_to_oai
+        from app.routes.messages import _wrap_translated_stream
+        translated = anth_stream_to_oai(upstream.aiter_bytes(), requested_model=model_id)
+        return StreamingResponse(
+            _wrap_translated_stream(translated, provider, on_complete, upstream),
+            media_type="text/event-stream",
+            headers={"x-prism-request-id": request_id},
+        )
 
     return StreamingResponse(
         stream_with_usage(upstream, provider, on_complete),

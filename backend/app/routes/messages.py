@@ -87,17 +87,8 @@ async def post_messages(
     except PrismException as exc:
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
-    # v0.2: For now, only Anthropic models on /v1/messages. v0.2 B5 adds
-    # protocol translation so OpenAI/Google models can also be used here.
-    if model.provider != "anthropic":
-        return error_response(
-            400,
-            f"Model {model_id} (provider {model.provider}) not yet supported on /v1/messages. "
-            "v0.2 B5 adds OAI↔Anthropic translation.",
-            "invalid_request_error",
-            param="model",
-            code="provider_translation_not_yet_supported",
-        )
+    # v0.2 B5: any provider works on /v1/messages — translators handle non-Anthropic.
+    needs_translation = model.provider != "anthropic"
 
     # ---- 3. Balance pre-flight --------------------------------------------
     estimated_input = _estimate_prompt_tokens(body)
@@ -175,6 +166,13 @@ async def post_messages(
                 tried_channels=tried,
                 is_streaming=False, client_ip=client_ip(request),
             )
+
+            # B5: if upstream wasn't anthropic, translate the response back to
+            # Anthropic format (since this is /v1/messages, client expects Anthropic shape)
+            if needs_translation:
+                from app.providers.translators.anth_to_oai import oai_response_to_anth
+                response_body = oai_response_to_anth(response_body, requested_model=model_id)
+
             return JSONResponse(status_code=upstream.status_code, content=response_body)
         finally:
             await provider.aclose()
@@ -197,11 +195,72 @@ async def post_messages(
         )
         await provider.aclose()
 
+    if needs_translation:
+        # OpenAI/Google upstream → translate stream to Anthropic SSE
+        from app.providers.translators.anth_to_oai import oai_stream_to_anth
+        translated = oai_stream_to_anth(upstream.aiter_bytes(), requested_model=model_id)
+        return StreamingResponse(
+            _wrap_translated_stream(translated, provider, on_complete, upstream),
+            media_type="text/event-stream",
+            headers={"x-prism-request-id": request_id},
+        )
+
     return StreamingResponse(
         stream_with_usage(upstream, provider, on_complete),
         media_type="text/event-stream",
         headers={"x-prism-request-id": request_id},
     )
+
+
+async def _wrap_translated_stream(translated_iter, provider, on_complete, upstream):
+    """For translated streams we don't accumulate usage incrementally — provider
+    can't parse foreign-format chunks. Read full upstream usage at end via
+    a separate path. v0.2 simplification: emit translated chunks; bill from
+    final usage tracker in translator output (which contains usage in the last
+    Anthropic message_delta event)."""
+    import asyncio
+    import json
+    from app.schemas.common import StreamingState, Usage
+
+    state = StreamingState()
+    try:
+        async for chunk in translated_iter:
+            yield chunk
+            # Try to extract usage from message_delta events (Anthropic format)
+            if b"message_delta" in chunk:
+                try:
+                    text = chunk.decode("utf-8", errors="replace")
+                    for line in text.split("\n"):
+                        if line.startswith("data:"):
+                            data = json.loads(line[5:].strip())
+                            u = data.get("usage") or {}
+                            if u.get("output_tokens"):
+                                state.usage = Usage(
+                                    prompt_tokens=state.usage.prompt_tokens or 0,
+                                    completion_tokens=u["output_tokens"],
+                                )
+                except Exception:
+                    pass
+            elif b"message_start" in chunk:
+                try:
+                    text = chunk.decode("utf-8", errors="replace")
+                    for line in text.split("\n"):
+                        if line.startswith("data:"):
+                            data = json.loads(line[5:].strip())
+                            u = (data.get("message") or {}).get("usage") or {}
+                            state.usage = Usage(
+                                prompt_tokens=u.get("input_tokens", 0),
+                                completion_tokens=state.usage.completion_tokens,
+                            )
+                except Exception:
+                    pass
+        state.stats.finished_normally = True
+    finally:
+        try:
+            await upstream.aclose()
+        except Exception:
+            pass
+        await on_complete(state)
 
 
 # ---- Helpers ----------------------------------------------------------------
