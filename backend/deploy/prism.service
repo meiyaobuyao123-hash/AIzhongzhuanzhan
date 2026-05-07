@@ -1,0 +1,26 @@
+[Unit]
+Description=Prism Gateway (transparent AI gateway)
+Documentation=https://github.com/meiyaobuyao123-hash/AIzhongzhuanzhan/blob/main/docs/v0.1-implementation-plan.md
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/prism
+EnvironmentFile=/opt/prism/.env
+# Use venv's uvicorn with 2 workers for v0.1
+ExecStart=/opt/prism/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8765 --workers 2 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=5
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=prism
+
+[Install]
+WantedBy=multi-user.target
