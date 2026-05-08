@@ -52,6 +52,7 @@ payment_app = typer.Typer(no_args_is_help=True, help="Manage top-up payments")
 usage_app = typer.Typer(no_args_is_help=True, help="Usage stats / reporting")
 audit_app = typer.Typer(no_args_is_help=True, help="View admin audit log")
 oauth_app = typer.Typer(no_args_is_help=True, help="Configure OAuth providers")
+capacity_app = typer.Typer(no_args_is_help=True, help="Capacity monitor (RPM/TPM/5xx)")
 app.add_typer(user_app, name="user")
 app.add_typer(key_app, name="key")
 app.add_typer(channel_app, name="channel")
@@ -60,6 +61,7 @@ app.add_typer(payment_app, name="payment")
 app.add_typer(usage_app, name="usage")
 app.add_typer(audit_app, name="audit")
 app.add_typer(oauth_app, name="oauth")
+app.add_typer(capacity_app, name="capacity")
 
 
 def _run(coro):
@@ -867,6 +869,53 @@ def usage_stats(
                 )
             console.print(tbl)
             console.print(f"\n[bold]Total cost:[/] {_micro_cents_to_usd_str(total_cost)}")
+
+    _run(_go())
+
+
+# =============================================================================
+# capacity subcommands
+# =============================================================================
+
+
+@capacity_app.command("report")
+def capacity_report(
+    window: Annotated[int, typer.Option("--window", help="Window minutes")] = 5,
+) -> None:
+    """Print the current per-channel rolling window stats."""
+    from app.monitoring.capacity import collect_alerts, evaluate_window
+
+    async def _go():
+        async with SessionLocal() as db:
+            stats = await evaluate_window(db, window_min=window)
+            if not stats:
+                console.print(f"[yellow]No usage in the last {window} min.[/]")
+                return
+            tbl = Table(
+                "Channel", "Requests", "RPM", "TPM",
+                "Errors", "Err %", "RPM quota",
+            )
+            for s in stats:
+                tbl.add_row(
+                    f"{s.channel_name} (#{s.channel_id})" if s.channel_id else s.channel_name,
+                    str(s.requests),
+                    f"{s.rpm:.1f}",
+                    f"{s.tpm:.0f}",
+                    str(s.errors),
+                    f"{s.error_rate_pct:.2f}",
+                    str(s.rpm_quota),
+                )
+            console.print(tbl)
+            alerts = collect_alerts(stats)
+            if alerts:
+                console.print(f"\n[bold red]Alerts (would fire if not debounced):[/] {len(alerts)}")
+                for a in alerts:
+                    console.print(
+                        f"  • {a.signal} on {a.channel_name}: "
+                        f"value={a.value}, threshold={a.threshold}"
+                    )
+            else:
+                console.print("\n[green]All channels within thresholds.[/]")
 
     _run(_go())
 
