@@ -74,10 +74,13 @@ async def check_rpm_limit(
     if not rpm_limit or rpm_limit <= 0:
         return
     key = f"prism:rpm:{api_key_id}"
-    pipe = redis_client.pipeline()
-    pipe.incr(key)
-    pipe.expire(key, 60, nx=True)  # Only set TTL if not already set
-    cnt, _ = await pipe.execute()
+    # Redis 6.x doesn't support EXPIRE ... NX (added in 7.0).
+    # Pattern: INCR; if returned 1 (first call this minute), set EXPIRE.
+    # Race-tolerant: if two concurrent calls both see cnt==1, second EXPIRE is
+    # a no-op overwrite with the same 60s TTL — fine for our purposes.
+    cnt = await redis_client.incr(key)
+    if cnt == 1:
+        await redis_client.expire(key, 60)
     if cnt > rpm_limit:
         raise RateLimited(
             f"Rate limit exceeded: {cnt} > {rpm_limit} RPM",
