@@ -558,8 +558,8 @@ function PaymentMethods() {
       </div>
 
       <div className="pay-grid">
-        <PayCard icon="alipay" title="支付宝" en="Alipay" desc="国内个人首选 · 实时到账" badge="即将开放" />
-        <PayCard icon="wechat" title="微信支付" en="WeChat Pay" desc="国内个人 · 实时到账" badge="即将开放" />
+        <PayCard icon="alipay" title="支付宝" en="Alipay" desc="国内个人 · 扫码 + 邮件核对 · 1h 内到账" badge="人工核对" />
+        <PayCard icon="wechat" title="微信支付" en="WeChat Pay" desc="国内个人 · 扫码 + 邮件核对 · 1h 内到账" badge="人工核对" />
         <PayCard icon="bank" title="对公转账" en="Bank wire" desc="Team 套餐专享 · 增值税专票 · 月结" badge="Team only" />
 
         <div className="pay-card pay-card-crypto">

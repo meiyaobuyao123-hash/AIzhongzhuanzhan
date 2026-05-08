@@ -519,11 +519,38 @@ function RequestDetailModal({ d, onClose }) {
 
 /* ─── Billing ────────────────────────────────────────────────────────────── */
 
+const USDT_CHANNELS = [
+  { key: 'usdt-trc20', title: 'USDT (TRC20)', en: 'Tron · 国内首选',
+    note: '链上费 ≈ $1 · 推荐金额 ≥ $50', icon: 'T', accent: '#EF4444' },
+  { key: 'usdt-sol',   title: 'USDT (Solana)', en: 'SPL · 美区首选',
+    note: '链上费 ≈ $0.001 · 任意金额', icon: '◎', accent: '#9333EA' },
+  { key: 'usdt-evm',   title: 'USDT (EVM)', en: 'BSC / Polygon / Arbitrum / ETH',
+    note: 'BSC 链上费 ≈ $0.3 · 推荐 BSC', icon: '⬢', accent: '#06B6D4' },
+];
+
 function Billing({ me }) {
   const [topups, setTopups] = useState([]);
-  useEffect(() => {
+  const [activeIntent, setActiveIntent] = useState(null);  // intent payload from /topup-intent
+  const [loadingChannel, setLoadingChannel] = useState(null);
+
+  const refresh = useCallback(() => {
     PrismAPI.get('/account/topups').then(d => setTopups(d.data || [])).catch(() => {});
   }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  async function startUSDT(channel, amount_usd) {
+    setLoadingChannel(channel);
+    try {
+      const data = await PrismAPI.post('/account/topup-intent', { channel, amount_usd });
+      setActiveIntent(data);
+      refresh();
+    } catch (err) {
+      alert('创建充值意向失败：' + (err.message || ''));
+    } finally {
+      setLoadingChannel(null);
+    }
+  }
 
   return (
     <>
@@ -535,29 +562,43 @@ function Billing({ me }) {
       </div>
 
       <section className="cs-section">
-        <h2>充值方式</h2>
-        <p style={{color: 'var(--text-muted)', fontSize: 13}}>
-          v0.2 阶段需要联系运营手动充值。v0.3 接入支付宝 / 微信 / USDT 链上自动到账。
+        <h2>USDT 自动到账</h2>
+        <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
+          点击任一通道生成专属充值地址 + 精确金额 · 链上扫到自动入账（30 秒内）·
+          余额永不过期 · 万分之五手续费
         </p>
-        <div style={{
-          background: 'rgba(245,158,11,0.08)',
-          border: '1px solid rgba(245,158,11,0.3)',
-          borderRadius: 'var(--r-md)',
-          padding: 16,
-          fontSize: 13,
-          color: 'var(--text-secondary)',
-        }}>
-          <strong style={{color: 'var(--accent-amber)'}}>当前手动模式</strong>：
-          请通过运营联系方式（公众号 / 微信 / 邮件）发送充值需求，含金额 + 你的邮箱（{me.email}）。
-          运营核对后会在 admin 后台手动到账。详见 <a href="/suanli/#pricing"
-          style={{color: 'var(--accent-cyan)'}}>支付方式说明</a>。
+        <div className="cs-pay-grid">
+          {USDT_CHANNELS.map(ch => (
+            <UsdtCard key={ch.key} channel={ch}
+              onStart={(amt) => startUSDT(ch.key, amt)}
+              loading={loadingChannel === ch.key}/>
+          ))}
+        </div>
+      </section>
+
+      <section className="cs-section">
+        <h2>国内支付（人工核对）</h2>
+        <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
+          扫码付款后请把支付截图 + 你的邮箱（<span className="mono">{me.email}</span>）
+          发到运营邮箱 <span className="mono">ops@ai100trading.cn</span>，工作时间 1 小时内入账。
+          v0.4 计划接入支付宝 PC / 微信 Native 接口实现自动到账。
+        </p>
+        <div className="cs-pay-grid">
+          <DomesticPayCard
+            title="支付宝" en="Alipay"
+            qrUrl="/suanli/qr-alipay.png"
+            tone="alipay"/>
+          <DomesticPayCard
+            title="微信支付" en="WeChat Pay"
+            qrUrl="/suanli/qr-wechat.png"
+            tone="wechat"/>
         </div>
       </section>
 
       <section className="cs-section">
         <h2>充值记录</h2>
         {topups.length === 0 ? (
-          <div className="cs-empty">还没充值记录。</div>
+          <div className="cs-empty">还没充值记录。点上方按钮发起一笔充值。</div>
         ) : (
           <table className="cs-table">
             <thead>
@@ -568,7 +609,8 @@ function Billing({ me }) {
                 <th>手续费</th>
                 <th>实际到账</th>
                 <th>状态</th>
-                <th>外部号</th>
+                <th>memo</th>
+                <th>tx hash</th>
               </tr>
             </thead>
             <tbody>
@@ -580,14 +622,177 @@ function Billing({ me }) {
                   <td className="mono">{fmtUSD(t.fee_usd)}</td>
                   <td>{fmtUSD(t.credited_usd)}</td>
                   <td><StatusPill status={t.status === 'paid' ? 'ok' : t.status}/></td>
-                  <td className="mono" style={{fontSize: 11}}>{t.external_ref?.slice(0, 18) || '-'}</td>
+                  <td className="mono" style={{fontSize: 11}}>{t.memo || '-'}</td>
+                  <td className="mono" style={{fontSize: 11}}>{t.external_ref?.slice(0, 14) || '-'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </section>
+
+      {activeIntent && (
+        <UsdtIntentModal
+          intent={activeIntent}
+          onClose={() => { setActiveIntent(null); refresh(); }}
+          onPaid={() => { setActiveIntent(null); refresh(); }}/>
+      )}
     </>
+  );
+}
+
+function UsdtCard({ channel, onStart, loading }) {
+  const [amount, setAmount] = useState(50);
+  return (
+    <div className="cs-pay-card" style={{borderColor: channel.accent + '40'}}>
+      <div className="cs-pay-card-head">
+        <span className="cs-pay-icon" style={{
+          background: channel.accent + '20',
+          color: channel.accent,
+          borderColor: channel.accent + '40',
+        }}>{channel.icon}</span>
+        <div>
+          <div className="cs-pay-card-title">{channel.title}</div>
+          <div className="cs-pay-card-en mono">{channel.en}</div>
+        </div>
+      </div>
+      <div className="cs-pay-card-note mono">{channel.note}</div>
+
+      <label className="cs-label" style={{marginTop: 12}}>充值金额（USD）</label>
+      <div style={{display: 'flex', gap: 8}}>
+        <input className="cs-input" type="number" min={5} max={100000} step={1}
+          value={amount} onChange={e => setAmount(Number(e.target.value))}/>
+        <button
+          className="cs-btn cs-btn-primary"
+          disabled={loading || amount < 5}
+          onClick={() => onStart(amount)}>
+          {loading ? '生成中…' : '立即充值'}
+        </button>
+      </div>
+      <div className="cs-pay-card-foot mono">
+        最低 $5 · 约 ${(amount * 0.0005).toFixed(2)} 手续费 ·
+        到账 ${(amount - amount * 0.0005).toFixed(2)}
+      </div>
+    </div>
+  );
+}
+
+function UsdtIntentModal({ intent, onClose, onPaid }) {
+  const [now, setNow] = useState(Date.now());
+  const [status, setStatus] = useState(intent.status || 'pending');
+
+  // Tick every second for countdown
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Poll topups every 8s; if our intent flipped to 'paid', notify
+  useEffect(() => {
+    const poll = setInterval(async () => {
+      try {
+        const d = await PrismAPI.get('/account/topups');
+        const mine = (d.data || []).find(t => t.id === intent.id);
+        if (mine && mine.status === 'paid') {
+          setStatus('paid');
+          clearInterval(poll);
+          setTimeout(() => onPaid(), 2000);
+        }
+      } catch {}
+    }, 8000);
+    return () => clearInterval(poll);
+  }, [intent.id, onPaid]);
+
+  const expiresAt = intent.expires_at ? new Date(intent.expires_at).getTime() : 0;
+  const remainSec = Math.max(0, Math.floor((expiresAt - now) / 1000));
+  const mins = Math.floor(remainSec / 60);
+  const secs = String(remainSec % 60).padStart(2, '0');
+
+  const copyAddr = () => navigator.clipboard?.writeText(intent.address);
+  const copyAmt = () => navigator.clipboard?.writeText(String(intent.expected_amount_usd));
+
+  return (
+    <div className="cs-modal-overlay" onClick={onClose}>
+      <div className="cs-modal" onClick={e => e.stopPropagation()}
+        style={{maxWidth: 560}}>
+        <h2 style={{marginTop: 0}}>
+          {status === 'paid' ? '✓ 已到账' : `${intent.channel.toUpperCase()} 充值`}
+        </h2>
+
+        {status !== 'paid' && (
+          <>
+            <div className="cs-pay-banner mono">
+              请在 <strong>{mins}:{secs}</strong> 内向以下地址转账
+              <strong> 精确金额 ${intent.expected_amount_usd}</strong>
+              {intent.network ? ` · 网络: ${intent.network.toUpperCase()}` : ''}
+            </div>
+
+            <label className="cs-label">收款地址</label>
+            <div className="cs-pay-row">
+              <code className="cs-pay-addr mono">{intent.address}</code>
+              <button className="cs-btn" onClick={copyAddr}>复制地址</button>
+            </div>
+
+            <label className="cs-label" style={{marginTop: 12}}>
+              精确金额 · 必须分毫不差
+            </label>
+            <div className="cs-pay-row">
+              <code className="cs-pay-addr mono" style={{fontSize: 18, color: 'var(--accent-amber)'}}>
+                ${intent.expected_amount_usd} USDT
+              </code>
+              <button className="cs-btn" onClick={copyAmt}>复制金额</button>
+            </div>
+
+            <div className="cs-pay-warn mono">
+              ⚠️ memo: <strong>{intent.memo}</strong> ·
+              金额最后 4 位 µ¢ 用于识别你的充值 · 多了少了不到账
+            </div>
+
+            <div style={{marginTop: 16, fontSize: 13, color: 'var(--text-muted)'}}>
+              转账后此页面 30 秒内自动检测到账 · 你也可以关掉此窗稍后回来看「充值记录」
+            </div>
+          </>
+        )}
+
+        {status === 'paid' && (
+          <div className="cs-pay-success">
+            <p>到账金额：<strong>${intent.credited_usd}</strong></p>
+            <p>余额刷新中…</p>
+          </div>
+        )}
+
+        <div className="cs-modal-actions">
+          <button className="cs-btn" onClick={onClose}>关闭</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DomesticPayCard({ title, en, qrUrl, tone }) {
+  const [imgError, setImgError] = useState(false);
+  return (
+    <div className={`cs-pay-card cs-pay-card-${tone}`}>
+      <div className="cs-pay-card-head">
+        <div>
+          <div className="cs-pay-card-title">{title}</div>
+          <div className="cs-pay-card-en mono">{en}</div>
+        </div>
+      </div>
+      <div className="cs-qr-box">
+        {imgError ? (
+          <div className="cs-qr-placeholder mono">
+            （二维码待补 · {qrUrl.split('/').pop()}）
+          </div>
+        ) : (
+          <img src={qrUrl} alt={`${title} 收款码`} className="cs-qr-img"
+            onError={() => setImgError(true)}/>
+        )}
+      </div>
+      <div className="cs-pay-card-foot mono">
+        扫码付款后发支付截图 + 邮箱到 ops@ai100trading.cn
+      </div>
+    </div>
   );
 }
 

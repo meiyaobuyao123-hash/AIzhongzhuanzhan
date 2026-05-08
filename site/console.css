@@ -274,3 +274,166 @@ body { margin: 0; background: var(--bg-base); }
   .cs-main { padding: 16px; }
   .cs-metrics { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Billing: USDT + domestic payment cards ────────────────────────────── */
+
+.cs-pay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.cs-pay-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.cs-pay-card:hover { transform: translateY(-2px); }
+
+.cs-pay-card-head { display: flex; align-items: center; gap: 12px; }
+.cs-pay-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: grid; place-items: center;
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 700;
+  border: 1px solid;
+}
+.cs-pay-card-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+.cs-pay-card-en {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cs-pay-card-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 0;
+  border-top: 1px dashed var(--border-subtle);
+  border-bottom: 1px dashed var(--border-subtle);
+}
+.cs-pay-card-foot {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.cs-pay-card-alipay { border-color: rgba(34,150,242,0.35); }
+.cs-pay-card-wechat { border-color: rgba(7,193,96,0.35); }
+
+.cs-qr-box {
+  background: #ffffff;
+  border-radius: var(--r-sm);
+  padding: 12px;
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+}
+.cs-qr-img {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  display: block;
+}
+.cs-qr-placeholder {
+  color: #555;
+  font-size: 12px;
+  text-align: center;
+  padding: 30px 12px;
+  border: 2px dashed #aaa;
+  border-radius: 8px;
+  background: #f6f6f6;
+  width: 100%;
+}
+
+/* USDT intent modal */
+.cs-pay-banner {
+  background: rgba(245,158,11,0.10);
+  border: 1px solid rgba(245,158,11,0.35);
+  color: var(--text-primary);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  margin: 10px 0 14px;
+}
+
+.cs-pay-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 6px 0;
+}
+.cs-pay-addr {
+  flex: 1;
+  background: #08081A;
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.cs-pay-warn {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  margin-top: 12px;
+}
+
+.cs-pay-success {
+  background: rgba(16,185,129,0.10);
+  border: 1px solid rgba(16,185,129,0.4);
+  border-radius: var(--r-sm);
+  padding: 16px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.cs-pay-success p { margin: 4px 0; }
+
+.cs-btn-primary {
+  background: linear-gradient(135deg, #8B5CF6, #06B6D4);
+  border: none;
+  color: white;
+  font-weight: 600;
+}
+.cs-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cs-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin: 8px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cs-input {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cs-input:focus {
+  border-color: rgba(139,92,246,0.55);
+}
