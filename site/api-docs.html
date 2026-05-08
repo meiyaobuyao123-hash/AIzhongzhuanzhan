@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>API Reference · Prism</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid rgba(0,0,0,0.06);
+      background: #FFFFFF; position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #18181B; }
+    .topbar-mark {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 50%, #EC4899 100%);
+      display: grid; place-items: center; color: white; font-weight: 700; font-size: 14px;
+    }
+    .topbar-name { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+    .topbar-nav { display: flex; gap: 18px; align-items: center; font-size: 14px; }
+    .topbar-nav a { color: #3F3F46; text-decoration: none; }
+    .topbar-nav a:hover { color: #5E6AD2; }
+    .topbar-nav a.active { color: #5E6AD2; font-weight: 500; }
+    .topbar-cta {
+      background: #5E6AD2; color: white !important; padding: 7px 14px;
+      border-radius: 6px; font-weight: 500;
+    }
+    .topbar-cta:hover { background: #4F58B8; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="topbar-brand" href="/suanli/">
+      <span class="topbar-mark">P</span>
+      <span class="topbar-name">Prism</span>
+    </a>
+    <nav class="topbar-nav">
+      <a href="/quickstart">Quickstart</a>
+      <a href="/api-docs" class="active">API Reference</a>
+      <a href="/suanli/#pricing">Pricing</a>
+      <a href="/console">Console</a>
+      <a href="/login" class="topbar-cta">登录</a>
+    </nav>
+  </div>
+
+  <!-- Scalar API Reference renders the OpenAPI spec served by FastAPI. -->
+  <script
+    id="api-reference"
+    data-url="/suanli-api/api/openapi.json"
+    data-configuration='{
+      "theme": "default",
+      "layout": "modern",
+      "hideClientButton": false,
+      "hideDownloadButton": false,
+      "hideTestRequestButton": false,
+      "defaultHttpClient": { "targetKey": "shell", "clientKey": "curl" },
+      "metaData": {
+        "title": "Prism Gateway API",
+        "description": "Transparent AI gateway. cost = price."
+      },
+      "servers": [
+        {
+          "url": "https://www.ai100trading.cn/suanli-api",
+          "description": "Production"
+        }
+      ]
+    }'
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body>
+</html>

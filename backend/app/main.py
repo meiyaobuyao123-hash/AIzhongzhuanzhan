@@ -53,12 +53,46 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         logger.info("prism_shutdown")
 
 
+API_DESCRIPTION = """
+**Prism** — transparent AI gateway. One API, 5 upstream providers, 0% markup.
+
+## Authentication
+All `/v1/*` and `/account/*` endpoints require a Prism Key (issued from the
+console). Pass as either header:
+- `Authorization: Bearer sk-prism-...`
+- `x-api-key: sk-prism-...`  (Anthropic-SDK style)
+
+## Pricing
+We pass through the upstream's price exactly — `cost = price`. The only
+fee is **0.05% on top-ups** (充 10000 到账 9995). See
+[`/suanli/#pricing`](https://www.ai100trading.cn/suanli/#pricing) for live rates.
+
+## Compatibility
+- `POST /v1/chat/completions` is OpenAI-compatible (works with the OpenAI SDK).
+- `POST /v1/messages` is Anthropic-native (works with Claude Code, anthropic-sdk).
+- Most models accessible via either endpoint thanks to the OAI↔Anthropic translator.
+"""
+
+OPENAPI_TAGS = [
+    {"name": "messages", "description": "Anthropic-native `/v1/messages` (Claude Code, anthropic-sdk-python)"},
+    {"name": "chat",     "description": "OpenAI-compatible `/v1/chat/completions` (OpenAI SDK, Cursor, Codex, …)"},
+    {"name": "models",   "description": "Model catalog — list available models the user can call"},
+    {"name": "auth",     "description": "Email/password registration + JWT sessions"},
+    {"name": "oauth",    "description": "GitHub / Google federated login"},
+    {"name": "account",  "description": "Self-service: profile, API keys, balance, top-ups, USDT intents"},
+    {"name": "usage",    "description": "Per-request logs + aggregate analytics + distinct-models filter"},
+    {"name": "health",   "description": "Liveness check"},
+]
+
 app = FastAPI(
-    title="Prism Gateway",
-    version="0.1.0",
-    description="Transparent AI gateway. cost = price. 0% markup.",
-    docs_url="/docs" if settings.debug else None,
+    title="Prism Gateway API",
+    version="0.3.0",
+    description=API_DESCRIPTION,
+    openapi_tags=OPENAPI_TAGS,
+    # OpenAPI spec + Swagger UI ALWAYS available in production (was debug-only).
+    docs_url="/api/docs",
     redoc_url=None,
+    openapi_url="/api/openapi.json",
     lifespan=lifespan,
 )
 

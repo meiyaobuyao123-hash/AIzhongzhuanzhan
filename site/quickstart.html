@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Quickstart · Prism</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #FAFAFA;
+      --surface: #FFFFFF;
+      --border: rgba(0,0,0,0.06);
+      --border-soft: rgba(0,0,0,0.10);
+      --text: #18181B;
+      --text-2: #3F3F46;
+      --text-muted: #71717A;
+      --accent: #5E6AD2;
+      --accent-soft: rgba(94,106,210,0.10);
+      --code-bg: #F4F4F5;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid var(--border);
+      background: var(--surface); position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .topbar-mark {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 50%, #EC4899 100%);
+      display: grid; place-items: center; color: white; font-weight: 700;
+    }
+    .topbar-name { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+    .topbar-nav { display: flex; gap: 18px; align-items: center; font-size: 14px; }
+    .topbar-nav a { color: var(--text-2); }
+    .topbar-nav a:hover { color: var(--accent); text-decoration: none; }
+    .topbar-nav a.active { color: var(--accent); font-weight: 500; }
+    .topbar-cta { background: var(--accent); color: white !important; padding: 7px 14px; border-radius: 6px; font-weight: 500; }
+    .topbar-cta:hover { background: #4F58B8; }
+
+    .layout {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 40px 32px 80px;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 48px;
+    }
+    .toc {
+      position: sticky; top: 80px; align-self: start;
+      font-size: 13px;
+    }
+    .toc-title {
+      text-transform: uppercase; letter-spacing: 0.05em;
+      font-size: 11px; color: var(--text-muted); margin-bottom: 12px;
+    }
+    .toc a {
+      display: block; padding: 4px 0; color: var(--text-2);
+    }
+    .toc a:hover { color: var(--accent); text-decoration: none; }
+
+    h1 { font-size: 32px; letter-spacing: -0.025em; margin: 0 0 12px; }
+    h2 {
+      font-size: 22px; letter-spacing: -0.02em;
+      margin: 48px 0 16px; padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    h3 { font-size: 16px; margin: 28px 0 8px; }
+    h2:first-of-type { border-top: none; padding-top: 0; }
+    p { color: var(--text-2); }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: var(--code-bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text);
+    }
+    pre {
+      background: #0F172A;
+      color: #E2E8F0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 12.5px;
+      line-height: 1.55;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    pre code { background: transparent; padding: 0; color: inherit; }
+
+    .callout {
+      background: var(--accent-soft);
+      border-left: 3px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 0 6px 6px 0;
+      margin: 16px 0;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .callout-warn { background: rgba(222,154,0,0.08); border-left-color: #DE9A00; }
+
+    table {
+      width: 100%; border-collapse: collapse;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; font-size: 13px;
+      margin: 16px 0;
+    }
+    table th, table td {
+      text-align: left; padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    table th {
+      background: var(--code-bg); color: var(--text-muted);
+      font-weight: 500; font-size: 11.5px;
+    }
+    table tr:last-child td { border-bottom: none; }
+    table td.mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    .lead { font-size: 17px; color: var(--text-2); margin-bottom: 28px; }
+
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; padding: 20px 16px 60px; }
+      .toc { position: static; margin-bottom: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="topbar-brand" href="/suanli/">
+      <span class="topbar-mark">P</span>
+      <span class="topbar-name">Prism</span>
+    </a>
+    <nav class="topbar-nav">
+      <a href="/quickstart" class="active">Quickstart</a>
+      <a href="/api-docs">API Reference</a>
+      <a href="/suanli/#pricing">Pricing</a>
+      <a href="/console">Console</a>
+      <a href="/login" class="topbar-cta">登录</a>
+    </nav>
+  </div>
+
+  <div class="layout">
+    <aside class="toc">
+      <div class="toc-title">本页内容</div>
+      <a href="#overview">概览</a>
+      <a href="#auth">1. 鉴权</a>
+      <a href="#openai">2. OpenAI SDK 调用</a>
+      <a href="#anthropic">3. Anthropic SDK 调用</a>
+      <a href="#streaming">4. 流式响应</a>
+      <a href="#models">5. 可用模型列表</a>
+      <a href="#errors">6. 错误码</a>
+      <a href="#billing">7. 计费精度</a>
+      <a href="#limits">8. 限速</a>
+      <a href="#full-ref">完整 API 参考 →</a>
+    </aside>
+
+    <main>
+      <h1>Quickstart</h1>
+      <p class="lead">5 分钟从注册到第一条流量。Prism 兼容 OpenAI 和 Anthropic 两套协议，
+        现成 SDK 改个 base_url 就能用。</p>
+
+      <h2 id="overview">概览</h2>
+      <p>Prism 网关是个透明的算力路由：你给我们 API 请求，我们转发给上游（OpenAI / Anthropic /
+        DeepSeek / Doubao / MiniMax），再把响应原样回给你。</p>
+      <ul>
+        <li><strong>0% 加价</strong> — 上游收我们多少，我们收你多少（精确到 µ¢）</li>
+        <li><strong>万 5 充值手续费</strong> — 充 ¥10000 到账 ¥9995（覆盖银行/链上 gas）</li>
+        <li><strong>22+ model 同一 API</strong> — 切换上游不用改代码</li>
+        <li><strong>USDT 自动到账</strong> — TRC20 / Solana / EVM 链上扫到自动入账</li>
+      </ul>
+
+      <h2 id="auth">1. 鉴权</h2>
+      <p>所有 API 调用需 <strong>Prism Key</strong>（不是上游 Key）。在 <a href="/console#keys">控制台 → API Keys</a> 创建。</p>
+      <p>Key 格式：<code>sk-prism-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>，41 字符。</p>
+      <p>两种传入方式：</p>
+      <pre><code>Authorization: Bearer sk-prism-xxx
+# 或
+x-api-key: sk-prism-xxx     # Anthropic SDK 风格</code></pre>
+
+      <h2 id="openai">2. OpenAI SDK 调用</h2>
+      <p>把 <code>base_url</code> 换成 Prism，<code>api_key</code> 换成 Prism Key，其他全部不动。</p>
+      <h3>Bash / curl</h3>
+<pre><code>curl https://www.ai100trading.cn/suanli-api/v1/chat/completions \
+  -H "Authorization: Bearer sk-prism-xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "你好"}]
+  }'</code></pre>
+      <h3>Python (openai SDK)</h3>
+<pre><code>from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://www.ai100trading.cn/suanli-api/v1",
+    api_key="sk-prism-xxx",
+)
+
+resp = client.chat.completions.create(
+    model="claude-haiku-4-5",      # 任选 22 个 model 之一
+    messages=[{"role": "user", "content": "你好"}],
+)
+print(resp.choices[0].message.content)</code></pre>
+
+      <div class="callout">
+        💡 同一个 OpenAI client 可以调用所有 Prism 暴露的模型，包括
+        <code>claude-*</code>、<code>deepseek-*</code>、<code>doubao-*</code>、
+        <code>minimax-*</code> ── 我们的网关会自动把 OpenAI 协议翻译成 Anthropic 协议。
+      </div>
+
+      <h2 id="anthropic">3. Anthropic SDK / Claude Code 调用</h2>
+      <p>Claude Code、anthropic-sdk-python 走 <code>/v1/messages</code>。</p>
+      <h3>Claude Code</h3>
+<pre><code>export ANTHROPIC_BASE_URL=https://www.ai100trading.cn/suanli-api
+export ANTHROPIC_AUTH_TOKEN=sk-prism-xxx
+claude  # 直接用即可</code></pre>
+      <h3>Python (anthropic SDK)</h3>
+<pre><code>import anthropic
+
+client = anthropic.Anthropic(
+    base_url="https://www.ai100trading.cn/suanli-api",
+    api_key="sk-prism-xxx",
+)
+
+msg = client.messages.create(
+    model="claude-opus-4-7",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "你好"}],
+)
+print(msg.content[0].text)</code></pre>
+
+      <h2 id="streaming">4. 流式响应</h2>
+      <p>所有 model 支持流式（SSE）。OpenAI 风格：</p>
+<pre><code>resp = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "讲个笑话"}],
+    stream=True,
+)
+for chunk in resp:
+    print(chunk.choices[0].delta.content or "", end="", flush=True)</code></pre>
+      <p>我们强制设 <code>stream_options.include_usage=true</code>，所以最后一帧会带完整的
+        token usage。这是计费依据，无法被关闭。</p>
+
+      <h2 id="models">5. 可用模型列表</h2>
+      <p>当前暴露 22 个 model。完整列表 + 实时单价见
+        <a href="/api-docs#tag/models">API 参考 → /v1/models</a>，或在
+        <a href="/console#usage">控制台 → 用量</a> 页的「模型」下拉框查看你已经用过的。</p>
+      <p>主要分类：</p>
+      <table>
+        <thead><tr><th>家族</th><th>model_id 示例</th><th>价位 (input/output per M tokens)</th></tr></thead>
+        <tbody>
+          <tr><td>Claude</td><td class="mono">claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5</td><td>$0.80/$4 ~ $15/$75</td></tr>
+          <tr><td>OpenAI</td><td class="mono">gpt-4o, gpt-4o-mini, gpt-5, gpt-5-mini, o1, o3-mini, o4-mini</td><td>$0.15/$0.60 ~ $15/$60</td></tr>
+          <tr><td>DeepSeek</td><td class="mono">deepseek-chat, deepseek-reasoner</td><td>$0.27/$1.10 ~ $0.55/$2.19</td></tr>
+          <tr><td>Doubao (火山方舟)</td><td class="mono">doubao-1-5-pro-32k-250115, doubao-seed-1-6-250615, ...</td><td>$0.04/$0.08 ~ $0.28/$1.11</td></tr>
+          <tr><td>MiniMax</td><td class="mono">minimax-text-01, abab6.5s-chat, abab6.5-chat</td><td>$0.14/$1.11 ~ $4.17/$4.17</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="errors">6. 错误码</h2>
+      <p>错误响应统一为 OpenAI 风格 JSON：</p>
+<pre><code>{
+  "error": {
+    "message": "Invalid API key",
+    "type": "authentication_error",
+    "code": "invalid_api_key"
+  }
+}</code></pre>
+      <table>
+        <thead><tr><th>HTTP</th><th>type</th><th>什么时候发生</th></tr></thead>
+        <tbody>
+          <tr><td>401</td><td class="mono">authentication_error</td><td>Prism Key 无效或被 revoke</td></tr>
+          <tr><td>402</td><td class="mono">insufficient_quota</td><td>余额不足以承载这次请求的 max_tokens 上限</td></tr>
+          <tr><td>403</td><td class="mono">permission_error</td><td>账户未邮箱验证 / 被禁用 / 模型未授权</td></tr>
+          <tr><td>404</td><td class="mono">invalid_request_error</td><td>model_id 不存在或未启用</td></tr>
+          <tr><td>429</td><td class="mono">rate_limit_error</td><td>RPM 超限（默认 60-1200，按 tier）</td></tr>
+          <tr><td>500</td><td class="mono">api_error</td><td>网关内部错</td></tr>
+          <tr><td>502</td><td class="mono">api_error</td><td>所有可用 channel 都失败 — 上游故障</td></tr>
+          <tr><td>503</td><td class="mono">api_error</td><td>该 model 没有可用 channel — 我们这边没接入</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="billing">7. 计费精度</h2>
+      <p>我们以 micro-cents（µ¢，1 USD = 100,000,000 µ¢）整数运算，杜绝浮点误差。</p>
+      <p>每条请求落 <code>usage_logs</code> 表一行，记录：</p>
+      <ul>
+        <li><code>prompt_tokens</code> / <code>completion_tokens</code> — 上游 usage 字段原值</li>
+        <li><code>cache_read_tokens</code> — 命中 prompt cache 的部分（按 cache_read 价计费）</li>
+        <li><code>cache_write_tokens</code> — Anthropic 写 cache 的部分（按 cache_write 价计费）</li>
+        <li><code>reasoning_tokens</code> — OpenAI o-series 内部推理 token（按 output 价计费）</li>
+      </ul>
+      <p>详细算法：<a href="https://github.com/meiyaobuyao123-hash/AIzhongzhuanzhan/blob/main/docs/token-accounting.md">docs/token-accounting.md</a></p>
+      <div class="callout callout-warn">
+        ⚠️ 已知边界：Anthropic 1M-context 模型的 >200K token 部分上游收 2× 价，我们暂未分档；
+        DeepSeek 错峰 5 折时段我们仍按全价收。详见 token-accounting.md §9。
+      </div>
+
+      <h2 id="limits">8. 限速</h2>
+      <p>每个 Prism Key 默认 RPM：按 tier 分档</p>
+      <table>
+        <thead><tr><th>累计充值</th><th>RPM</th></tr></thead>
+        <tbody>
+          <tr><td>&lt; $50</td><td>60</td></tr>
+          <tr><td>$50 ~ $500</td><td>240</td></tr>
+          <tr><td>$500 ~ $5000</td><td>600</td></tr>
+          <tr><td>≥ $5000 / Team</td><td>1200</td></tr>
+        </tbody>
+      </table>
+      <p>每个 API Key 也可单独设置 <code>rate_limit_rpm</code> 覆盖默认值，去
+        <a href="/console#keys">控制台 → API Keys</a>。</p>
+
+      <h2 id="full-ref">完整 API 参考</h2>
+      <p>每个端点的请求体 / 响应 / 示例：<a href="/api-docs">/api-docs (Scalar 渲染的交互式文档)</a></p>
+      <p>原始 OpenAPI JSON：<a href="/suanli-api/api/openapi.json">/suanli-api/api/openapi.json</a></p>
+    </main>
+  </div>
+</body>
+</html>

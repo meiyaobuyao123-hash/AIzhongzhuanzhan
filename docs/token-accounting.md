@@ -282,3 +282,80 @@ Provider 升级响应格式（新字段、字段重命名等）→ 我们没更�
 - 增值服务（高级面板、批处理、私有模型托管等）
 
 详见 [`docs/prd.md`](prd.md) §1。
+
+---
+
+## 9. 已知边界 / 政策披露（v0.3）
+
+### 9.1 Anthropic 1M-context 模型 >200K token 部分
+
+`claude-opus-4-7`、`claude-opus-4-6`、`claude-sonnet-4-6` 这几个 1M-context 模型，
+Anthropic 对 prompt **超过 200K token** 的部分 **以 2× 价格计费**：
+
+```
+input  ≤200K: $15/M (Opus) · $3/M (Sonnet)
+input  >200K: $30/M (Opus) · $6/M (Sonnet)
+output ≤200K: $75/M (Opus) · $15/M (Sonnet)
+output >200K: $150/M (Opus) · $30/M (Sonnet)
+```
+
+**Prism 当前不分档计费** — 我们一律按 ≤200K 档收用户。这意味着用户拿超长 prompt
+打 Claude 时，我们**承担**那部分 2× 差价。等真有客户大规模用 200K+ 长上下文（典型场景：
+长文档 RAG），再扩展 Model schema 加多档计费。
+
+### 9.2 DeepSeek 错峰半价
+
+DeepSeek 在 16:30-00:30 UTC（北京时间 0:30-8:30）对所有调用 **打 5 折**。
+**Prism 不传导这个折扣** — 客户在错峰时段调 deepseek-chat / deepseek-reasoner
+仍按公开价表收费，我们 pocket 掉 50% 差价。
+
+理由：错峰窗口固定但折扣是上游临时政策，跟随它会让我们的价目表变得每 8 小时翻倍变化，
+对客户预算和发票核对不友好。我们明示这个差价归我们。
+
+如果你想吃这个折扣 → 直接去 platform.deepseek.com 自己拿 key 调。
+
+### 9.3 Doubao（火山方舟）按 input 长度分档
+
+Doubao seed-1.6 系列**官方按 input 长度分 3 档**：
+
+```
+input ≤32K:  ¥0.8/M in · ¥8/M out (短上下文，最便宜)
+input 32-128K: ¥1.2/M in · ¥16/M out (中等)
+input 128-256K: ¥2.4/M in · ¥24/M out (长上下文，最贵)
+```
+
+**Prism 一律按 ≤32K 档收用户** ($0.111/M input, $1.11/M output)。客户在 >32K input
+场景下我们承担差价。同 9.1 处理：等量大了再分档。
+
+### 9.4 其他
+
+- 我们的所有 USD 转换用近似汇率 7.20 CNY/USD 固定。汇率波动 ±3% 内吃下，超过则更新。
+- MiniMax 国内版 vs 国际版价目相同，我们只接了国内版。
+- Volcengine 上的 GLM / Qwen / Kimi 第三方 model 我们暂未上架（价格待核实）。
+
+---
+
+## 10. 计费 vs 上游对账自查命令
+
+每月人工跑一次确保计费两端一致：
+
+```bash
+# 服务器上跑
+cd /opt/prism && .venv/bin/python -c "
+import sqlite3, json
+con = sqlite3.connect('/opt/prism/data/prism.db')
+print('=== Per-channel Total cost we charged users (last 30d) ===')
+for r in con.execute('''
+  SELECT c.name, c.id, COUNT(*) AS reqs,
+         ROUND(SUM(u.cost_micro_cents)/100000000.0, 4) AS billed_usd,
+         SUM(u.prompt_tokens) AS in_tok,
+         SUM(u.completion_tokens) AS out_tok
+  FROM usage_logs u JOIN channels c ON c.id=u.channel_id
+  WHERE u.created_at >= datetime('now', '-30 day')
+  GROUP BY c.id
+'''):
+    print(f'  ch{r[1]:2d} {r[0]:35s} reqs={r[2]:5d} billed=\${r[3]:.4f} in_tok={r[4]:8,} out_tok={r[5]:8,}')
+"
+```
+
+把这里 `billed_usd` 与各上游官方账单对比；差异 >0.5% 的写 incident report。

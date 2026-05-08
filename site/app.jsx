@@ -66,19 +66,19 @@ function TopNav() {
             <span className="zh">定价</span>
             <span className="en mono">pricing</span>
           </a>
-          <a className="nav-link" href="#docs">
+          <a className="nav-link" href="/api-docs">
             <span className="zh">文档</span>
             <span className="en mono">docs</span>
           </a>
-          <a className="nav-link" href="#console">
+          <a className="nav-link" href="/console">
             <span className="zh">控制台</span>
             <span className="en mono">console</span>
           </a>
         </div>
 
         <div className="nav-right">
-          <a className="nav-login" href="#login">登录</a>
-          <a className="cta-primary nav-cta" href="#signup">
+          <a className="nav-login" href="/login">登录</a>
+          <a className="cta-primary nav-cta" href="/signup">
             立即开始
             <Arrow2/>
           </a>

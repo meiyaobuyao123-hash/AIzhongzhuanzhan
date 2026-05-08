@@ -17,6 +17,7 @@ const ICON_PATHS = {
   arrowUp:   '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>',
   dollar:    '<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
   // Misc
+  book:      '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
   copy:      '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   x:         '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
   check:     '<polyline points="20 6 9 17 4 12"/>',
@@ -108,6 +109,19 @@ function ConsoleApp() {
             <span>{t.label}</span>
           </a>
         ))}
+        <div style={{height: 12}}/>
+        <a href="/api-docs" target="_blank" rel="noreferrer"
+           className="cs-nav-link cs-nav-external" title="OpenAPI 交互文档">
+          <Icon name="book"/>
+          <span>API 文档</span>
+          <Icon name="arrowUp" size={11} className="cs-icon-ext"/>
+        </a>
+        <a href="/quickstart" target="_blank" rel="noreferrer"
+           className="cs-nav-link cs-nav-external" title="5 分钟接入指南">
+          <Icon name="zap"/>
+          <span>Quickstart</span>
+          <Icon name="arrowUp" size={11} className="cs-icon-ext"/>
+        </a>
         <div className="cs-nav-foot">
           {me.email}
           <br/>

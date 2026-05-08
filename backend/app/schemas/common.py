@@ -24,11 +24,16 @@ class Usage:
     reasoning_tokens: int = 0
 
     def merge(self, other: Usage) -> Usage:
-        """Combine two usages by addition (used in streaming accumulation).
+        """⚠️ DEPRECATED — DO NOT USE for streaming accumulation.
 
-        For Anthropic streaming: input_tokens comes once (in message_start),
-        output_tokens accumulates. We treat all fields additively but in
-        practice only completion-side grows mid-stream.
+        This adds completion_tokens / reasoning_tokens, which is wrong for
+        Anthropic (whose message_delta carries CUMULATIVE output_tokens, not
+        deltas). Use `app.streaming.sse._merge_usage` instead, which uses
+        "latest non-zero wins" semantics and handles all providers correctly.
+
+        Kept only for legacy callers that did simple additive aggregation
+        of fully-closed Usage objects (not streaming chunks). New code
+        should NOT call this.
         """
         return Usage(
             prompt_tokens=self.prompt_tokens or other.prompt_tokens,

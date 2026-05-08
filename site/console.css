@@ -791,3 +791,11 @@ body {
 code, .mono {
   font-family: 'JetBrains Mono', monospace;
 }
+
+/* External nav links (API 文档, Quickstart) */
+.cs-nav-external .cs-icon-ext {
+  margin-left: auto;
+  opacity: 0.5;
+  transform: rotate(45deg);
+}
+.cs-nav-external:hover .cs-icon-ext { opacity: 0.9; }
