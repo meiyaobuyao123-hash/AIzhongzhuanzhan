@@ -18,7 +18,9 @@ AI 中转站 SaaS 项目立项资料库。
 - [docs/token-accounting.md](docs/token-accounting.md) — Token 计费准确性：上游 `usage` 字段为真理 / 流式响应处理 / 月底对账流程 / 误差容差 < 0.5% / "差错双倍返"承诺。
 - [docs/payment-methods.md](docs/payment-methods.md) — 充值方式：6 种通道（支付宝 / 微信 / USDT-TRC20 / USDT-Solana / USDT-EVM / 对公）/ 万 5 统一手续费 / 收款地址 / v0.1 手动 SOP / v0.3 自动化路径。
 - [docs/v0.1-implementation-plan.md](docs/v0.1-implementation-plan.md) — **v0.1 后端 MVP 实施方案**：技术栈选型 / 目录结构 / URL 设计 / 数据库 DDL（7 张表）/ 模块详细设计 / Admin CLI 命令 / 测试策略 / 部署步骤 / 分阶段开发顺序（A 骨架 → B 适配器 → C 路由+流式+计费 → D 部署联调）/ 留出的 placeholder 一览。
-- [docs/v0.2-spec.md](docs/v0.2-spec.md) — **v0.2 产品设计**（开发中）：从自用骨架到单开发者自助可用——邮箱注册 + OAuth（GitHub/Google）+ JWT / Web 控制台 5 个 tab / 多 channel 路由 + 熔断状态机 + failover / OAI↔Anthropic 协议互转 / Redis 限速。3 张新表 + 4 个字段增量。7 个开发阶段约 6 周。
+- [docs/v0.2-spec.md](docs/v0.2-spec.md) — **v0.2 产品设计**（已上线）：邮箱注册 + OAuth（GitHub/Google）+ JWT / Web 控制台 5 个 tab / 多 channel 路由 + 熔断状态机 + failover / OAI↔Anthropic 协议互转 / Redis 限速。3 张新表 + 4 个字段增量。
+- [docs/v0.3-spec.md](docs/v0.3-spec.md) — **v0.3 产品设计**（开发中）：价格²反比加权（OpenRouter 同款）+ Prompt cache 粘性路由 + 阶梯限速联动 / 邀请返佣（5%）+ 首充 1.05× 加成 / **USDT 链上自动监听**（TRC20/Solana/EVM）+ 自动到账匹配 / 容量预警（RPM/TPM/5xx 阈值 → 邮件 + audit）。
+- [docs/oauth-setup.md](docs/oauth-setup.md) — OAuth (GitHub/Google) 一键登录 10 分钟配置指南。
 
 ### 设计
 - [prompts/claude-design-prompts.md](prompts/claude-design-prompts.md) — Claude design 提示词包 v1，完整多页营销站设计提示词（首页 / 模型 / 定价 / 文档 / 控制台 / 登录注册），含品牌候选（Prism / Nimbus / Mesh / Axiom / 百模）、设计系统 token、视觉风格"3D 酒店风"。
