@@ -26,17 +26,17 @@ function HeroSection() {
             <span>。</span>
           </h1>
           <p className="hero-sub">
-            200+ 模型，一个 OpenAI 兼容 API。价目表写在你看得见的地方。
+            5 家上游、20+ 模型，一个 OpenAI 兼容 API。价目表写在你看得见的地方。
           </p>
           <p className="hero-sub-en mono">cost = price. always.</p>
 
           <div className="hero-cta-row">
-            <a href="#signup" className="cta-primary">
+            <a href="/signup" className="cta-primary">
               <span>立即开始</span>
               <span className="cta-aside">充 1 万到账 9995</span>
               <Arrow />
             </a>
-            <a href="#models" className="cta-ghost">查看模型与价格</a>
+            <a href="/quickstart" className="cta-ghost">读 5 分钟 Quickstart</a>
           </div>
 
           <div className="hero-trust-mini">
@@ -157,7 +157,7 @@ function CodeWindow({ model, animKey }) {
 {`from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://api.prism.ai/v1",
+    base_url="https://www.ai100trading.cn/suanli-api/v1",
     api_key="sk-prism-…",
 )
 
