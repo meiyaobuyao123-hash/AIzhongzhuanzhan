@@ -23,8 +23,8 @@ async def test_second_credit_attempt_is_noop(db_session):
         user_id=user.id,
         channel="usdt-trc20",
         amount_micro_cents=100_000_000,
-        fee_micro_cents=50_000,
-        credited_micro_cents=99_950_000,
+        fee_micro_cents=1_500_000,
+        credited_micro_cents=98_500_000,
         status="pending",
         receiver_address="TT24g41HLptouzxGycZxQKmWaTENK4K4HG",
         expected_amount_micro_cents=100_001_234,
@@ -53,7 +53,7 @@ async def test_second_credit_attempt_is_noop(db_session):
 
     # Balance still credited only once
     await db_session.refresh(user)
-    assert user.balance_micro_cents == 99_950_000
+    assert user.balance_micro_cents == 98_500_000
 
     btxs = (await db_session.execute(select(BalanceTransaction))).scalars().all()
     assert len(btxs) == 1
@@ -105,8 +105,8 @@ async def test_multiple_pending_match_oldest(db_session):
     common = dict(
         channel="usdt-trc20",
         amount_micro_cents=100_000_000,
-        fee_micro_cents=50_000,
-        credited_micro_cents=99_950_000,
+        fee_micro_cents=1_500_000,
+        credited_micro_cents=98_500_000,
         status="pending",
         expected_amount_micro_cents=100_001_234,
         memo="1234",

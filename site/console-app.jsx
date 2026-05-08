@@ -23,7 +23,7 @@ const ICON_PATHS = {
   check:     '<polyline points="20 6 9 17 4 12"/>',
   chevronDown:  '<polyline points="6 9 12 15 18 9"/>',
   chevronRight: '<polyline points="9 18 15 12 9 6"/>',
-  // Pay icons (for USDT cards — geometric shapes)
+  // Pay icons (for USDC cards — geometric shapes)
   diamond:   '<rect x="3" y="11" width="18" height="11" rx="2"/><circle cx="12" cy="16" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   hexagon:   '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
   circle:    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>',
@@ -817,13 +817,15 @@ function RequestDetailModal({ d, onClose }) {
 
 /* ─── Billing ────────────────────────────────────────────────────────────── */
 
+// Channel keys keep `usdt-*` internally for DB CHECK constraint compatibility.
+// Display labels show USDC — that's what we actually accept now.
 const USDT_CHANNELS = [
-  { key: 'usdt-trc20', title: 'USDT (TRC20)', en: 'Tron · 国内首选',
-    note: '链上费 ≈ $1 · 推荐金额 ≥ $50',     icon: 'diamond', accent: '#DC2626' },
-  { key: 'usdt-sol',   title: 'USDT (Solana)', en: 'SPL · 美区首选',
-    note: '链上费 ≈ $0.001 · 任意金额',       icon: 'circle',  accent: '#7C3AED' },
-  { key: 'usdt-evm',   title: 'USDT (EVM)', en: 'BSC / Polygon / Arbitrum / ETH',
-    note: 'BSC 链上费 ≈ $0.3 · 推荐 BSC',     icon: 'hexagon', accent: '#0891B2' },
+  { key: 'usdt-trc20', title: 'USDC (TRC20)', en: 'Tron · 国内首选',
+    note: '链上费 ≈ $1 · 推荐金额 ≥ $50',     icon: 'diamond', accent: '#2775CA' },
+  { key: 'usdt-sol',   title: 'USDC (Solana)', en: 'SPL · 美区首选',
+    note: '链上费 ≈ $0.001 · 任意金额',       icon: 'circle',  accent: '#2775CA' },
+  { key: 'usdt-evm',   title: 'USDC (EVM)', en: 'BSC / Polygon / Arbitrum / ETH',
+    note: 'BSC 链上费 ≈ $0.3 · 推荐 BSC',     icon: 'hexagon', accent: '#2775CA' },
 ];
 
 function Billing({ me }) {
@@ -855,12 +857,12 @@ function Billing({ me }) {
       <div className="cs-metrics">
         <Metric label="当前余额" value={fmtUSD(me.balance_usd)}/>
         <Metric label="累计充值" value={fmtUSD(me.total_topped_up_usd)}/>
-        <Metric label="手续费" value="0.05%" meta="万分之五"/>
+        <Metric label="手续费" value="1.5%" meta="百分之一点五"/>
         <Metric label="加价" value="0%" meta="cost = price"/>
       </div>
 
       <section className="cs-section">
-        <h2>USDT 自动到账</h2>
+        <h2>USDC 自动到账</h2>
         <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
           点击任一通道生成专属充值地址 + 精确金额 · 链上扫到自动入账（30 秒内）·
           余额永不过期 · 万分之五手续费
@@ -1038,7 +1040,7 @@ function UsdtIntentModal({ intent, onClose, onPaid }) {
             </label>
             <div className="cs-pay-row">
               <code className="cs-pay-addr mono" style={{fontSize: 18, color: 'var(--accent-amber)'}}>
-                ${intent.expected_amount_usd} USDT
+                ${intent.expected_amount_usd} USDC
               </code>
               <button className="cs-btn" onClick={copyAmt}>复制金额</button>
             </div>

@@ -1,14 +1,14 @@
-"""Generic EVM-USDT monitor (BSC / Polygon / Arbitrum / Ethereum).
+"""Generic EVM-USDC monitor (BSC / Polygon / Arbitrum / Ethereum).
 
 Uses the Etherscan-style `?module=account&action=tokentx` endpoint that all
 four chain explorers expose. Polls for new ERC-20 transfers of the chain's
-USDT contract to our receive address since `state.last_block_height`.
+USDC contract to our receive address since `state.last_block_height`.
 
-USDT decimals vary across chains:
-  - BSC:        18 (BEP-20 USDT)
-  - Polygon:     6
-  - Arbitrum:    6
-  - Ethereum:    6
+USDC decimals per chain:
+  - BSC (Binance-Peg USDC):  18
+  - Polygon (native USDC):    6
+  - Arbitrum (native USDC):   6
+  - Ethereum (USDC):          6
 
 We pick a default chain (settings.evm_default_chain) and instantiate one
 EvmMonitor per evm sub-chain we want to watch. v0.3 ships only the default
@@ -34,7 +34,7 @@ class EvmChainConfig:
     name: str           # 'bsc' / 'polygon' / 'arbitrum' / 'ethereum'
     api_base: str
     api_key: str
-    contract: str       # USDT contract on this chain
+    contract: str       # USDC contract on this chain
     decimals: int
 
 
@@ -44,28 +44,28 @@ def _build_evm_chain_configs() -> dict[str, EvmChainConfig]:
             name="bsc",
             api_base=settings.bscscan_api_base,
             api_key=settings.bscscan_api_key,
-            contract=settings.bsc_usdt_contract,
+            contract=settings.bsc_usdc_contract,
             decimals=18,
         ),
         "polygon": EvmChainConfig(
             name="polygon",
             api_base=settings.polygonscan_api_base,
             api_key=settings.polygonscan_api_key,
-            contract=settings.polygon_usdt_contract,
+            contract=settings.polygon_usdc_contract,
             decimals=6,
         ),
         "arbitrum": EvmChainConfig(
             name="arbitrum",
             api_base=settings.arbiscan_api_base,
             api_key=settings.arbiscan_api_key,
-            contract=settings.arbitrum_usdt_contract,
+            contract=settings.arbitrum_usdc_contract,
             decimals=6,
         ),
         "ethereum": EvmChainConfig(
             name="ethereum",
             api_base=settings.etherscan_api_base,
             api_key=settings.etherscan_api_key,
-            contract=settings.ethereum_usdt_contract,
+            contract=settings.ethereum_usdc_contract,
             decimals=6,
         ),
     }

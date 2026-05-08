@@ -29,8 +29,8 @@ async def _seed_pending_intent(db_session, user_email="t@x.com",
         user_id=user.id,
         channel=channel,
         amount_micro_cents=10_000_000_000,  # $100
-        fee_micro_cents=5_000_000,          # $0.05
-        credited_micro_cents=9_995_000_000,  # $99.95
+        fee_micro_cents=150_000_000,        # $1.50 (1.5%)
+        credited_micro_cents=9_850_000_000,  # $98.50
         status="pending",
         receiver_address="TT24g41HLptouzxGycZxQKmWaTENK4K4HG",
         expected_amount_micro_cents=expected_µc,
@@ -55,7 +55,7 @@ def _trongrid_response(value_units: str, tx_hash: str = "abc123",
                 "to": to,
                 "value": value_units,
                 "token_info": {
-                    "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+                    "address": "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8",
                     "symbol": "USDT",
                     "decimals": 6,
                 },
@@ -138,14 +138,14 @@ async def test_tron_exact_match_credits_user(db_session):
     assert intent.status == "paid"
     assert intent.tx_hash == "tron_tx_match"
     assert intent.paid_at is not None
-    assert user.balance_micro_cents == 9_995_000_000
-    assert user.total_topped_up_micro_cents == 9_995_000_000
+    assert user.balance_micro_cents == 9_850_000_000
+    assert user.total_topped_up_micro_cents == 9_850_000_000
 
     # BalanceTransaction row written
     btx = (await db_session.execute(select(BalanceTransaction))).scalar_one()
     assert btx.type == "topup"
-    assert btx.amount_micro_cents == 9_995_000_000
-    assert btx.balance_after_micro_cents == 9_995_000_000
+    assert btx.amount_micro_cents == 9_850_000_000
+    assert btx.balance_after_micro_cents == 9_850_000_000
 
     await mon.close()
 
@@ -177,7 +177,7 @@ async def test_tron_filters_other_contracts_and_recipients(db_session):
                 "block_timestamp": 2,
                 "from": "f", "to": "TOtherWalletXXXXX",
                 "value": "1000000",
-                "token_info": {"address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "decimals": 6},
+                "token_info": {"address": "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8", "decimals": 6},
             },
             # Good
             {
@@ -185,7 +185,7 @@ async def test_tron_filters_other_contracts_and_recipients(db_session):
                 "block_timestamp": 3,
                 "from": "f", "to": "TT24g41HLptouzxGycZxQKmWaTENK4K4HG",
                 "value": "1000000",
-                "token_info": {"address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "decimals": 6},
+                "token_info": {"address": "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8", "decimals": 6},
             },
         ],
     }
@@ -217,13 +217,13 @@ async def test_tron_advances_cursor_after_fetch(db_session):
                 "transaction_id": "x", "block_timestamp": 5_000,
                 "from": "f", "to": "TT24g41HLptouzxGycZxQKmWaTENK4K4HG",
                 "value": "1000000",
-                "token_info": {"address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "decimals": 6},
+                "token_info": {"address": "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8", "decimals": 6},
             },
             {
                 "transaction_id": "y", "block_timestamp": 3_000,
                 "from": "f", "to": "TT24g41HLptouzxGycZxQKmWaTENK4K4HG",
                 "value": "2000000",
-                "token_info": {"address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "decimals": 6},
+                "token_info": {"address": "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8", "decimals": 6},
             },
         ],
     }

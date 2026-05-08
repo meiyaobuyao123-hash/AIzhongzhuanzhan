@@ -13,7 +13,7 @@ from app.models.orm import ChainMonitorState, PaymentIntent, User
 
 BSCSCAN_BASE = "https://api.bscscan.com/api/"
 RECEIVE = "0xC862ff9Fd79D180950E546DBB8b108d5c9c38582"
-USDT_BSC = "0x55d398326f99059fF775485246999027B3197955"
+USDT_BSC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"  # actually USDC now
 
 
 def _bsc_response(items: list[dict]) -> dict:
@@ -77,8 +77,8 @@ async def test_evm_match_and_credit(db_session):
         user_id=user.id,
         channel="usdt-evm",
         amount_micro_cents=10_000_000_000,
-        fee_micro_cents=5_000_000,
-        credited_micro_cents=9_995_000_000,
+        fee_micro_cents=150_000_000,
+        credited_micro_cents=9_850_000_000,
         status="pending",
         receiver_address=RECEIVE,
         expected_amount_micro_cents=10_000_000_000,
@@ -105,7 +105,7 @@ async def test_evm_match_and_credit(db_session):
     await db_session.refresh(user)
     await db_session.refresh(intent)
     assert intent.status == "paid"
-    assert user.balance_micro_cents == 9_995_000_000
+    assert user.balance_micro_cents == 9_850_000_000
     await mon.close()
 
 

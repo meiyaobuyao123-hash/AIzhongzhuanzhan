@@ -111,8 +111,8 @@ async def test_solana_match_credits_user(db_session):
         user_id=user.id,
         channel="usdt-sol",
         amount_micro_cents=10_000_000_000,
-        fee_micro_cents=5_000_000,
-        credited_micro_cents=9_995_000_000,
+        fee_micro_cents=150_000_000,
+        credited_micro_cents=9_850_000_000,
         status="pending",
         receiver_address=RECEIVE,
         expected_amount_micro_cents=10_000_000_001,  # $100.00000001
@@ -153,7 +153,7 @@ async def test_solana_match_credits_user(db_session):
     await db_session.refresh(user)
     await db_session.refresh(intent)
     assert intent.status == "paid"
-    assert user.balance_micro_cents == 9_995_000_000
+    assert user.balance_micro_cents == 9_850_000_000
     await mon.close()
 
 

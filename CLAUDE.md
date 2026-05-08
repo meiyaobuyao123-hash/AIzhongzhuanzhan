@@ -6,7 +6,8 @@
 
 ## 0. 一句话定义
 
-**Prism**：透明定价的 AI 模型聚合 API 网关。把 200+ 主流模型背后的 60+ 上游渠道汇聚成一个 OpenAI 兼容 API，按上游成本（**0% 加价**）+ 充值万 5（0.05%）手续费销售。
+**Prism**：透明定价的 AI 模型聚合 API 网关。把 200+ 主流模型背后的 60+ 上游渠道汇聚成一个 OpenAI 兼容 API，按上游成本（**0% 加价**）+ 充值 **1.5% 全通道手续费**销售。
+（2026-05-09 起从早期 0.05% 调整为 1.5%，覆盖支付通道 / 商户费 / 链上 gas 实际成本。）
 
 主域名：**https://www.ai100trading.cn/suanli/**（首页 + Web 控制台 + API 都在这个域）。
 
@@ -17,13 +18,13 @@
 | # | 决策 | 不变量 |
 |---|---|---|
 | 1 | **API only，永不账号切片** | 不偷 Pro/Max OAuth token；只走开发者 API 账号 |
-| 2 | **0% 加价 + 万 5 充值手续费** | inference 单价 = 上游单价；充 10000 到账 9995 |
+| 2 | **0% 加价 + 1.5% 充值手续费** | inference 单价 = 上游单价；充 10000 到账 9850（**2026-05-09 起**，之前 0.05% / 9995） |
 | 3 | **2 档用户**：Self-serve / Team | 不要 Free / Developer 这种细分；self-serve 内部按累计充值阶梯做运行时差异化 |
 | 4 | **渠道明牌** | 客户在请求详情面板能看到走的哪条 channel + region + 政策 |
 | 5 | **micro-cents 整数运算** | 所有金钱数字以微分整数存储；杜绝浮点 |
-| 6 | **6 种支付通道** | 支付宝 / 微信 / USDT (TRC20/SOL/EVM) / 对公 / Stripe；TRC20 是国内首选 |
+| 6 | **6 种支付通道** | 支付宝 / 微信 / USDC (TRC20/SOL/EVM) / 对公 / Stripe；TRC20 是国内首选 |
 
-USDT 收款地址（公开 - 已展示在首页）：
+**USDC 收款地址**（钱包地址不变；token 从 USDT 切换到 USDC 于 2026-05-09）：
 - **TRC20** (Tron, 国内首选): `TT24g41HLptouzxGycZxQKmWaTENK4K4HG`
 - **Solana** (SPL): `66p5tnV6Fd7x5QmRE6X772PMVmVUVgozRzATJ4Ns9iQn`
 - **EVM** (BSC/Polygon/Arbitrum/ERC20): `0xC862ff9Fd79D180950E546DBB8b108d5c9c38582`

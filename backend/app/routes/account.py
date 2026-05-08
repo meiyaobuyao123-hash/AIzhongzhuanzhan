@@ -325,11 +325,11 @@ async def topups(
 # ─── /account/topup-intent ──────────────────────────────────────────────────
 
 
-_USDT_CHANNELS = {"usdt-trc20", "usdt-sol", "usdt-evm"}
+_USDT_CHANNELS = {"usdt-trc20", "usdt-sol", "usdt-evm"}  # internal IDs unchanged for DB CHECK compat
 
 
 def _address_for_channel(channel: str) -> tuple[str, str]:
-    """Return (receive_address, network_hint) for a USDT channel."""
+    """Return (receive_address, network_hint) for a USDC channel."""
     if channel == "usdt-trc20":
         return settings.chain_tron_address, "tron"
     if channel == "usdt-sol":
@@ -362,7 +362,7 @@ async def create_topup_intent(
     authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a pending USDT top-up intent.
+    """Create a pending USDC top-up intent.
 
     Returns the payment address + the EXACT amount the user must send
     (with a 4-digit µ¢-suffix that disambiguates them from other concurrent
@@ -447,7 +447,7 @@ async def create_topup_intent(
         "expires_at": intent.expires_at.isoformat() if intent.expires_at else None,
         "instructions": (
             f"Send EXACTLY ${intent.expected_amount_micro_cents / 100_000_000:.6f} "
-            f"USDT on {intent.network} to the address above. The amount's last "
+            f"USDC on {intent.network} to the address above. The amount's last "
             f"4 µ¢ ({intent.memo}) identify your top-up — paying the wrong "
             f"amount will not credit your balance automatically."
         ),

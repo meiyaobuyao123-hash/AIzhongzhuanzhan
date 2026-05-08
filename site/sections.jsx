@@ -450,21 +450,21 @@ function PricingPreview() {
     <section className="pricing" id="pricing">
       <SectionHeader
         kicker="定价"
-        title="充 1 万到账 9995 · 0% 加价"
-        sub="Inference 不加价。充值收 0.05% 手续费——只够覆盖银行/链上 gas。"
+        title="充 1 万到账 9850 · 0% 加价"
+        sub="Inference 不加价。充值收 1.5% 手续费——覆盖支付通道 / 链上 gas / 商户费。"
       />
       <div className="price-grid price-grid-2">
         <PriceCard
           tier="Self-serve"
           featured
           price="按量付费"
-          tagline="充值即用 · 万 5 手续费 · 0% 加价"
+          tagline="充值即用 · 1.5% 充值费 · 0% 加价"
           features={[
             '20+ 模型，五家上游全覆盖',
             'OpenAI / Anthropic 双协议',
             '价格²反比加权路由 + prompt cache 透传',
             '限速按充值阶梯 60 → 1200 RPM',
-            '支付宝 / 微信 / USDT 充值',
+            '支付宝 / 微信 / USDC 充值',
           ]}
           cta="立即注册"
           ctaHref="/signup"
@@ -527,7 +527,7 @@ function PricingPreview() {
         </div>
         <div className="pc-note">
           Inference 按 <code>price_in × token_in + price_out × token_out</code> 精确计算，与上游一致。
-          充值时另收 <code>0.05%</code> 手续费（充 1 万到账 9995）。每条请求扣费写进 <code>usage_logs</code>，月底可下载对账 CSV。
+          充值时另收 <code>1.5%</code> 手续费（充 1 万到账 9850）。每条请求扣费写进 <code>usage_logs</code>，月底可下载对账 CSV。
         </div>
       </div>
 
@@ -552,8 +552,8 @@ function PaymentMethods() {
     <div className="pay-row">
       <div className="pay-head">
         <span className="kicker mono">充值方式 · payment methods</span>
-        <h3 className="pay-title display">6 种通道 · 一律万 5 手续费</h3>
-        <p className="pay-sub mono">Pay any way you want · same 0.05% fee · top up $5 minimum.</p>
+        <h3 className="pay-title display">5 种通道 · 一律 1.5% 充值费</h3>
+        <p className="pay-sub mono">同一档手续费，覆盖银行 / 商户 / 链上 gas。$5 起充。</p>
       </div>
 
       <div className="pay-grid">
@@ -566,7 +566,7 @@ function PaymentMethods() {
             <span className="pay-icon pay-icon-trc">T</span>
             <div>
               <div className="pay-card-title">
-                USDT (TRC20)
+                USDC (TRC20)
                 <span className="pay-card-pill">推荐</span>
               </div>
               <div className="pay-card-en mono">国内首选 · 链上费 ≈ $1</div>
@@ -585,8 +585,8 @@ function PaymentMethods() {
           <div className="pay-card-head">
             <span className="pay-icon pay-icon-sol">◎</span>
             <div>
-              <div className="pay-card-title">USDT (Solana)</div>
-              <div className="pay-card-en mono">USDT-SPL · ~$0.001 链上费</div>
+              <div className="pay-card-title">USDC (Solana)</div>
+              <div className="pay-card-en mono">USDC-SPL · ~$0.001 链上费</div>
             </div>
           </div>
           <div className="pay-addr-row">
@@ -602,7 +602,7 @@ function PaymentMethods() {
           <div className="pay-card-head">
             <span className="pay-icon pay-icon-evm">⬢</span>
             <div>
-              <div className="pay-card-title">USDT (EVM)</div>
+              <div className="pay-card-title">USDC (EVM)</div>
               <div className="pay-card-en mono">BSC / Polygon / Arbitrum / ERC20</div>
             </div>
           </div>
@@ -748,8 +748,8 @@ function FinalCTA() {
     <section className="final-cta" id="signup">
       <div className="fcta-card">
         <div className="fcta-eyebrow mono">ready when you are</div>
-        <h2 className="fcta-title display">充 1 万到账 9995 · 立刻接入 20+ 模型</h2>
-        <p className="fcta-sub">0% 加价 · 万 5 手续费 · 微信 / 支付宝 / USDT 全通道</p>
+        <h2 className="fcta-title display">充 1 万到账 9850 · 立刻接入 20+ 模型</h2>
+        <p className="fcta-sub">0% 加价 · 1.5% 充值费 · 微信 / 支付宝 / USDC 全通道</p>
         <div className="fcta-row">
           <a className="cta-primary" href="/signup">立即注册 <Arrow2/></a>
           <a className="cta-ghost" href="/quickstart">读 5 分钟 Quickstart</a>

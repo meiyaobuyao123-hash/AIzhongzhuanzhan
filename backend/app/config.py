@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     upstream_connect_timeout_s: int = 10
 
     # Billing
-    topup_fee_basis_points: int = 5
-    """5 bps = 0.05% = 万分之五"""
+    topup_fee_basis_points: int = 150
+    """150 bps = 1.5% — covers Stripe / 商户号 / 链上 gas 等通道成本"""
 
     # Redis
     redis_url: str = "redis://127.0.0.1:6379/0"
@@ -89,13 +89,14 @@ class Settings(BaseSettings):
     chain_solana_address: str = "66p5tnV6Fd7x5QmRE6X772PMVmVUVgozRzATJ4Ns9iQn"
     chain_evm_address: str = "0xC862ff9Fd79D180950E546DBB8b108d5c9c38582"
 
-    # USDT contract addresses
-    tron_usdt_contract: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+    # USDC contract addresses (we accept USDC across all chains, NOT USDT).
+    # ⚠️ 上线前用 tronscan / bscscan 等浏览器复核每个合约。
+    tron_usdc_contract: str = "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8"
     solana_usdc_mint: str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-    bsc_usdt_contract: str = "0x55d398326f99059fF775485246999027B3197955"
-    polygon_usdt_contract: str = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"
-    arbitrum_usdt_contract: str = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
-    ethereum_usdt_contract: str = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+    bsc_usdc_contract: str = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+    polygon_usdc_contract: str = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
+    arbitrum_usdc_contract: str = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
+    ethereum_usdc_contract: str = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 
     # Default EVM sub-chain (the one we tell users to send USDT on first)
     evm_default_chain: str = "bsc"

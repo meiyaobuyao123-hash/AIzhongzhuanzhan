@@ -23,7 +23,7 @@ window.PRISM_PROVIDERS_MARQUEE = [
 window.PRISM_TRUST_METRICS = [
   { num: '20+',     label: '可调模型',     en: 'models' },
   { num: '5',       label: '上游 provider', en: 'providers' },
-  { num: '0.05%',   label: '充值费率',      en: 'top-up fee' },
+  { num: '1.5%',    label: '充值费率',      en: 'top-up fee' },
   { num: '0%',      label: '加价',         en: 'markup', highlight: true },
 ];
 
@@ -185,15 +185,15 @@ window.PRISM_NOT_DOING = [
 window.PRISM_FAQ = [
   {
     q: '和直接调官方 API 有什么区别？',
-    a: '同一个客户端、同一套代码，多了：多渠道自动故障切换、支付宝/微信/USDT 充值、多家模型一个 Key、按 Key 拆分的用量面板。价格不加价，与上游一致。',
+    a: '同一个客户端、同一套代码，多了：多渠道自动故障切换、支付宝/微信/USDC 充值、多家模型一个 Key、按 Key 拆分的用量面板。价格不加价，与上游一致。',
   },
   {
     q: '0% 加价怎么活？',
-    a: '充值收 0.05% 手续费（万分之五，覆盖银行/链上 gas）。Team 套餐对公月结另计。',
+    a: '充值收 1.5% 手续费（覆盖支付通道 / 商户费 / 链上 gas）。Team 套餐对公月结另计。',
   },
   {
     q: '能开发票吗？',
-    a: 'Team 套餐起支持对公转账 + 增值税专票。个人走支付宝/微信/USDT，暂不开票。',
+    a: 'Team 套餐起支持对公转账 + 增值税专票。个人走支付宝/微信/USDC，暂不开票。',
   },
   {
     q: 'Claude Code / Cursor / Codex 怎么接入？',

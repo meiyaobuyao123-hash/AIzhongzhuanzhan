@@ -1,10 +1,10 @@
-"""TRC20 USDT monitor (TronGrid).
+"""TRC20 USDC monitor (TronGrid).
 
 API ref:
   https://developers.tron.network/reference/get-trc20-transaction-info-by-account-address
 
 We poll `GET /v1/accounts/{addr}/transactions/trc20`, filter by:
-  - token_info.address == settings.tron_usdt_contract
+  - token_info.address == settings.tron_usdc_contract
   - to == settings.chain_tron_address
   - block_timestamp > state.last_scanned_at_ms
 
@@ -24,10 +24,10 @@ from app.logging_config import logger
 from app.models.orm import ChainMonitorState
 from app.payments.base import ChainMonitor, IncomingTx
 
-# 1 USDT-TRC20 = 10^6 token units. 1 USDT = 100_000_000 µ¢ in our units.
-# So token_unit → µ¢ multiplier = 100.
+# 1 USDC-TRC20 = 10^6 token units. 1 USDC = 100_000_000 µ¢ in our units.
+# Token unit → µ¢ multiplier = 100.
 TRC20_DECIMALS = 6
-MICRO_CENTS_PER_USDT = 100_000_000
+MICRO_CENTS_PER_USDC = 100_000_000
 
 
 class TronMonitor(ChainMonitor):
@@ -36,7 +36,7 @@ class TronMonitor(ChainMonitor):
 
     def __init__(self) -> None:
         self.receive_address = settings.chain_tron_address
-        self.usdt_contract = settings.tron_usdt_contract
+        self.usdc_contract = settings.tron_usdc_contract
         headers: dict[str, str] = {"accept": "application/json"}
         if settings.trongrid_api_key:
             headers["TRON-PRO-API-KEY"] = settings.trongrid_api_key
@@ -63,7 +63,7 @@ class TronMonitor(ChainMonitor):
         params: dict[str, Any] = {
             "limit": 50,
             "only_to": "true",
-            "contract_address": self.usdt_contract,
+            "contract_address": self.usdc_contract,
         }
         if min_timestamp_ms:
             params["min_timestamp"] = min_timestamp_ms + 1  # exclusive
@@ -85,7 +85,7 @@ class TronMonitor(ChainMonitor):
         for item in body.get("data", []):
             try:
                 token_info = item.get("token_info") or {}
-                if (token_info.get("address") or "").lower() != self.usdt_contract.lower():
+                if (token_info.get("address") or "").lower() != self.usdc_contract.lower():
                     continue
                 to_addr = item.get("to") or ""
                 if to_addr.lower() != self.receive_address.lower():
@@ -97,9 +97,9 @@ class TronMonitor(ChainMonitor):
                 ts_ms = int(item.get("block_timestamp") or 0)
 
                 # Convert raw units → µ¢
-                # value is in 10^TRC20_DECIMALS units of a USDT token
+                # value is in 10^TRC20_DECIMALS units of a USDC token
                 value_units = int(value_str)
-                amount_micro_cents = value_units * MICRO_CENTS_PER_USDT // (10 ** TRC20_DECIMALS)
+                amount_micro_cents = value_units * MICRO_CENTS_PER_USDC // (10 ** TRC20_DECIMALS)
 
                 out.append(IncomingTx(
                     network="tron",

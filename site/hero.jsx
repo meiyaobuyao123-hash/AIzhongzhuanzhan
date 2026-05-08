@@ -33,16 +33,16 @@ function HeroSection() {
           <div className="hero-cta-row">
             <a href="/signup" className="cta-primary">
               <span>立即开始</span>
-              <span className="cta-aside">充 1 万到账 9995</span>
+              <span className="cta-aside">充 1 万到账 9850</span>
               <Arrow />
             </a>
             <a href="/quickstart" className="cta-ghost">读 5 分钟 Quickstart</a>
           </div>
 
           <div className="hero-trust-mini">
-            <span>0% 加价 · 万 5 手续费</span>
+            <span>0% 加价 · 1.5% 充值费</span>
             <span className="dot">·</span>
-            <span>支付宝 / 微信 / 对公</span>
+            <span>支付宝 / 微信 / USDC</span>
             <span className="dot">·</span>
             <span>OpenAI 协议直接兼容</span>
           </div>

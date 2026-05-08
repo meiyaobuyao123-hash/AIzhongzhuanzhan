@@ -73,8 +73,8 @@ async def test_topup_intent_creates_pending_intent_with_memo(db_engine):
     assert body["network"] == "tron"
     assert body["address"] == "TT24g41HLptouzxGycZxQKmWaTENK4K4HG"
     assert body["amount_usd"] == 100.0
-    assert body["fee_usd"] == 0.05            # 100 * 5bps = $0.05
-    assert body["credited_usd"] == 99.95
+    assert body["fee_usd"] == 1.5             # 100 * 150 bps = $1.50
+    assert body["credited_usd"] == 98.5
     assert body["memo"]
     assert len(body["memo"]) == 4
     assert body["expected_amount_micro_cents"] > 100 * 100_000_000
