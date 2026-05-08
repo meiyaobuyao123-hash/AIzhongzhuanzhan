@@ -531,3 +531,195 @@ body { margin: 0; background: var(--bg-base); }
   .cs-summary-cards { grid-template-columns: repeat(2, 1fr); }
   .cs-page-ctrl { width: 100%; justify-content: space-between; }
 }
+
+/* ── UI 2.0: Polished Usage Dashboard ────────────────────────────────── */
+
+/* Metric cards — gradient accent + icon + bigger value */
+.cs-metric {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.01) 100%),
+    var(--bg-surface);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+.cs-metric:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 92, 246, 0.35);
+}
+.cs-metric::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent, #8B5CF6), transparent);
+  opacity: 0.5;
+}
+.cs-metric-cyan    { --accent: #06B6D4; }
+.cs-metric-purple  { --accent: #8B5CF6; }
+.cs-metric-magenta { --accent: #EC4899; }
+.cs-metric-green   { --accent: #10B981; }
+.cs-metric-amber   { --accent: #F59E0B; }
+
+.cs-metric-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cs-metric-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent, #8B5CF6) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #8B5CF6) 35%, transparent);
+  border-radius: 8px;
+  color: var(--accent, #8B5CF6);
+  font-size: 14px;
+  font-weight: 700;
+}
+.cs-metric-label { margin-bottom: 0; }
+.cs-metric-value {
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, var(--text-primary), color-mix(in srgb, var(--accent, #8B5CF6) 50%, var(--text-primary)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.cs-metric-meta { margin-top: 6px; }
+
+/* Filter bar — softer borders, group separator */
+.cs-filter-bar {
+  background:
+    linear-gradient(135deg, rgba(139,92,246,0.04), rgba(6,182,212,0.04)),
+    var(--bg-elevated);
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  position: relative;
+}
+.cs-filter-bar::before {
+  content: '筛选';
+  position: absolute;
+  top: -9px;
+  left: 16px;
+  background: var(--bg-base);
+  padding: 0 8px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Provider family badges */
+.cs-fam {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  padding: 3px 7px;
+  border-radius: 5px;
+  margin-right: 8px;
+  border: 1px solid;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.cs-fam-anthropic { color: #F4A261; background: rgba(244, 162, 97, 0.10); border-color: rgba(244, 162, 97, 0.35); }
+.cs-fam-openai    { color: #10B981; background: rgba(16, 185, 129, 0.10); border-color: rgba(16, 185, 129, 0.35); }
+.cs-fam-doubao    { color: #EF4444; background: rgba(239, 68, 68, 0.10); border-color: rgba(239, 68, 68, 0.35); }
+.cs-fam-deepseek  { color: #818CF8; background: rgba(129, 140, 248, 0.10); border-color: rgba(129, 140, 248, 0.35); }
+.cs-fam-minimax   { color: #06B6D4; background: rgba(6, 182, 212, 0.10); border-color: rgba(6, 182, 212, 0.35); }
+.cs-fam-google    { color: #FBBF24; background: rgba(251, 191, 36, 0.10); border-color: rgba(251, 191, 36, 0.35); }
+.cs-fam-glm       { color: #A78BFA; background: rgba(167, 139, 250, 0.10); border-color: rgba(167, 139, 250, 0.35); }
+.cs-fam-qwen      { color: #F472B6; background: rgba(244, 114, 182, 0.10); border-color: rgba(244, 114, 182, 0.35); }
+.cs-fam-kimi      { color: #34D399; background: rgba(52, 211, 153, 0.10); border-color: rgba(52, 211, 153, 0.35); }
+.cs-fam-other     { color: var(--text-muted); background: rgba(148, 163, 184, 0.10); border-color: rgba(148, 163, 184, 0.30); }
+
+.cs-model-cell {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.cs-model-id {
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+
+/* Table polish */
+.cs-table {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  border-radius: 12px;
+}
+.cs-table th {
+  background: linear-gradient(180deg, rgba(0,0,0,0.30), rgba(0,0,0,0.20));
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  padding: 14px;
+}
+.cs-table tr {
+  transition: background 0.14s ease;
+}
+.cs-table tbody tr:hover {
+  background: rgba(139, 92, 246, 0.05);
+}
+
+/* Section header polish */
+.cs-section h2 {
+  position: relative;
+  padding-left: 14px;
+}
+.cs-section h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #8B5CF6, #06B6D4);
+}
+
+/* Empty state with subtle illustration vibe */
+.cs-empty {
+  background:
+    radial-gradient(ellipse at top, rgba(139, 92, 246, 0.05), transparent 50%),
+    var(--bg-elevated);
+  border: 1px dashed rgba(139, 92, 246, 0.25);
+  border-radius: 12px;
+  padding: 40px 16px;
+}
+
+/* Pagination control polish */
+.cs-page-ctrl .cs-btn {
+  min-width: 84px;
+  font-weight: 500;
+}
+.cs-page-info {
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+
+/* Aggregate group-by tabs feel like a segmented control */
+.cs-section-head .cs-row {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 4px;
+}
+.cs-section-head .cs-row .cs-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 12px !important;
+  border-radius: 6px;
+}
+.cs-section-head .cs-row .cs-btn-primary {
+  background: linear-gradient(135deg, #8B5CF6, #06B6D4) !important;
+  color: white;
+  animation: none;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+}

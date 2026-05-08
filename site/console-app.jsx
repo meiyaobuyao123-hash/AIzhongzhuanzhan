@@ -158,10 +158,14 @@ function Overview({ me }) {
   );
 }
 
-function Metric({ label, value, meta }) {
+function Metric({ label, value, meta, icon, accent }) {
+  const accentClass = accent ? `cs-metric-${accent}` : '';
   return (
-    <div className="cs-metric">
-      <div className="cs-metric-label">{label}</div>
+    <div className={`cs-metric ${accentClass}`}>
+      <div className="cs-metric-head">
+        {icon && <span className="cs-metric-icon">{icon}</span>}
+        <div className="cs-metric-label">{label}</div>
+      </div>
       <div className="cs-metric-value">{value}</div>
       {meta && <div className="cs-metric-meta">{meta}</div>}
     </div>
@@ -173,6 +177,44 @@ function StatusPill({ status }) {
             : status === 'partial' ? 'cs-pill-warn'
             : 'cs-pill-err';
   return <span className={`cs-pill ${cls}`}>{status}</span>;
+}
+
+/* Provider/family color coding for model_id badges. Returns a CSS modifier. */
+function modelFamily(modelId) {
+  const m = (modelId || '').toLowerCase();
+  if (m.startsWith('claude'))  return 'anthropic';
+  if (m.startsWith('gpt-') || m.startsWith('o1') || m.startsWith('o3') || m.startsWith('o4') || m.startsWith('o5')) return 'openai';
+  if (m.startsWith('doubao'))  return 'doubao';
+  if (m.startsWith('deepseek'))return 'deepseek';
+  if (m.startsWith('minimax') || m.startsWith('abab')) return 'minimax';
+  if (m.startsWith('gemini'))  return 'google';
+  if (m.startsWith('glm'))     return 'glm';
+  if (m.startsWith('qwen'))    return 'qwen';
+  if (m.startsWith('kimi'))    return 'kimi';
+  return 'other';
+}
+
+function ProviderBadge({ modelId }) {
+  const fam = modelFamily(modelId);
+  const labels = {
+    anthropic: 'Claude', openai: 'OpenAI', doubao: 'Doubao',
+    deepseek: 'DeepSeek', minimax: 'MiniMax', google: 'Gemini',
+    glm: 'GLM', qwen: 'Qwen', kimi: 'Kimi', other: '·',
+  };
+  return (
+    <span className={`cs-fam cs-fam-${fam}`} title={modelId}>
+      {labels[fam]}
+    </span>
+  );
+}
+
+function ModelCell({ modelId }) {
+  return (
+    <span className="cs-model-cell">
+      <ProviderBadge modelId={modelId}/>
+      <span className="mono cs-model-id">{modelId}</span>
+    </span>
+  );
 }
 
 /* ─── Keys ───────────────────────────────────────────────────────────────── */
@@ -466,11 +508,13 @@ function Usage() {
       {/* Summary cards */}
       <div className="cs-summary-cards">
         <Metric label="请求数" value={fmtCompact(summary.total_requests || 0)}
-                meta="该时间段"/>
-        <Metric label="输入 tokens" value={fmtCompact(summary.total_input_tokens || 0)}/>
-        <Metric label="输出 tokens" value={fmtCompact(summary.total_output_tokens || 0)}/>
+                meta="该时间段" icon="⚡" accent="cyan"/>
+        <Metric label="输入 tokens" value={fmtCompact(summary.total_input_tokens || 0)}
+                icon="↓" accent="purple"/>
+        <Metric label="输出 tokens" value={fmtCompact(summary.total_output_tokens || 0)}
+                icon="↑" accent="magenta"/>
         <Metric label="总成本" value={fmtUSD(summary.total_cost_usd || 0)}
-                meta="cost = price · 0% 加价"/>
+                meta="cost = price · 0% 加价" icon="$" accent="green"/>
       </div>
 
       {/* Aggregate section */}
@@ -525,13 +569,15 @@ function Usage() {
                       onClick={expandable ? () => setExpanded(isOpen ? null : childKey) : undefined}
                       style={expandable ? {cursor: 'pointer'} : undefined}
                     >
-                      <td className="mono">
+                      <td>
                         {expandable && (
-                          <span style={{display: 'inline-block', width: 14}}>
+                          <span style={{display: 'inline-block', width: 14, color: 'var(--text-muted)'}}>
                             {isOpen ? '▾' : '▸'}
                           </span>
                         )}
-                        {display}
+                        {groupBy === 'model'
+                          ? <ModelCell modelId={display}/>
+                          : <span className="mono">{display}</span>}
                       </td>
                       <td>{fmtCompact(r.requests)}</td>
                       <td className="mono">{fmtCompact(r.input_tokens)}</td>
@@ -541,7 +587,10 @@ function Usage() {
                     </tr>
                     {isOpen && (r.models || []).map(m => (
                       <tr key={`${i}:${m.model_id}`} className="cs-row-child">
-                        <td className="mono" style={{paddingLeft: 36}}>↳ {m.model_id}</td>
+                        <td style={{paddingLeft: 36}}>
+                          <span style={{color: 'var(--text-muted)', marginRight: 6}}>↳</span>
+                          <ModelCell modelId={m.model_id}/>
+                        </td>
                         <td>{fmtCompact(m.requests)}</td>
                         <td className="mono">{fmtCompact(m.input_tokens)}</td>
                         <td className="mono">{fmtCompact(m.output_tokens)}</td>
@@ -603,7 +652,7 @@ function Usage() {
               {requests.data.map(r => (
                 <tr key={r.request_id}>
                   <td className="mono" style={{fontSize: 11}}>{r.created_at?.slice(0, 19).replace('T', ' ')}</td>
-                  <td className="mono" style={{fontSize: 12}}>{r.model_id}</td>
+                  <td><ModelCell modelId={r.model_id}/></td>
                   <td><StatusPill status={r.status}/></td>
                   <td className="mono">{fmtCompact(r.tokens.prompt)}</td>
                   <td className="mono">{fmtCompact(r.tokens.completion)}</td>

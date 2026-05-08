@@ -44,6 +44,17 @@ class OpenAIProvider(Provider):
             opts.setdefault("include_usage", True)
             body["stream_options"] = opts
 
+        # OpenAI o-series (reasoning) models reject `max_tokens` and require
+        # `max_completion_tokens` instead. Auto-translate to keep our gateway
+        # OpenAI-SDK-compatible from the client's POV.
+        model_id = str(body.get("model") or "")
+        if (
+            re.match(r"^o\d", model_id)
+            and "max_tokens" in body
+            and "max_completion_tokens" not in body
+        ):
+            body["max_completion_tokens"] = body.pop("max_tokens")
+
         path = chat_completions_path(str(self.client.base_url))
         request = self.client.build_request(
             "POST",
