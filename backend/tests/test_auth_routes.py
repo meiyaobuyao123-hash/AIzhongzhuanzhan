@@ -42,6 +42,36 @@ async def test_register_creates_user_pending(db_engine):
 
 
 @pytest.mark.asyncio
+async def test_register_auto_verify_when_disabled(db_engine, monkeypatch):
+    """When email_verification_required=False, register issues a JWT
+    immediately and returns status='verified' — no email step required."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "email_verification_required", False)
+
+    async with _build_app(db_engine) as app:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            r = await ac.post("/auth/register", json={
+                "email": "instant@example.com",
+                "password": "long-pwd-12345",
+            })
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["status"] == "verified"
+    assert body["token"]
+    assert body["expires_at"]
+    assert body["user"]["email"] == "instant@example.com"
+
+    # Verify the user is actually marked verified in DB
+    from app.models.orm import User
+    _, Session = db_engine
+    async with Session() as db:
+        u = (await db.execute(
+            __import__("sqlalchemy").select(User).where(User.email == "instant@example.com")
+        )).scalar_one()
+        assert u.email_verified is True
+
+
+@pytest.mark.asyncio
 async def test_register_email_already_taken(db_engine):
     from app.models.orm import User
 

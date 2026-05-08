@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     oauth_google_client_secret: str = ""
     oauth_redirect_base: str = "https://www.ai100trading.cn/suanli-api"
 
+    # When False, registration auto-verifies the email and immediately issues
+    # a JWT — no verification mail is sent. Use when SMTP isn't configured.
+    # Default: True (production behaviour). Server .env overrides to False.
+    email_verification_required: bool = True
+
     # Email — pick ONE provider. Order of precedence:
     #   1. Resend (HTTP API; easiest — sign up at resend.com, get key)
     #   2. SMTP (if smtp_host + smtp_user set)

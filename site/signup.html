@@ -36,6 +36,12 @@ function SignupPage() {
     setLoading(true);
     try {
       const data = await PrismAPI.post('/auth/register', { email, password }, { requireAuth: false });
+      // If backend auto-verified (no SMTP gate), it returns a token. Log in immediately.
+      if (data.token) {
+        PrismAPI.setToken(data.token, data.expires_at);
+        location.href = '/console';
+        return;
+      }
       setSubmitted(data);
     } catch (err) {
       setError(err.message || '注册失败');

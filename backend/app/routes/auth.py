@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import record_audit
+from app.config import settings
 from app.deps import client_ip, get_db
 from app.email import send_password_reset_email, send_verification_email
 from app.errors import (
@@ -107,11 +108,13 @@ async def register(
         return error_response(400, exc.message, "invalid_request_error", param="email")
 
     pwd_hash = _pwd_hasher.hash(body.password)
+    auto_verify = not settings.email_verification_required
+
     user = User(
         email=email,
         password_hash=pwd_hash,
         tier="self-serve",
-        email_verified=False,
+        email_verified=auto_verify,
     )
     db.add(user)
     try:
@@ -123,6 +126,34 @@ async def register(
             code="email_taken", param="email",
         )
 
+    user_agent = request.headers.get("user-agent")
+
+    if auto_verify:
+        # No SMTP configured (or admin opted out). Skip verification step,
+        # issue a JWT immediately so the user lands in /console after signup.
+        token, jti, expires_at = issue_token(user.id, tier=user.tier)
+        await create_session_record(
+            db, user_id=user.id, jti=jti, expires_at=expires_at,
+            user_agent=user_agent, ip=client_ip(request),
+        )
+        await record_audit(
+            db, actor=f"user:{user.id}", action="user.register",
+            target=str(user.id), ip=client_ip(request),
+            payload={"email": email, "auto_verified": True},
+        )
+        await db.commit()
+        return {
+            "user_id": user.id,
+            "email": email,
+            "status": "verified",
+            "token": token,
+            "expires_at": expires_at.isoformat(),
+            "user": {
+                "id": user.id, "email": user.email, "tier": user.tier,
+            },
+        }
+
+    # Standard flow: create verification token + send email
     plain_token = await _create_email_verif(db, user)
     await record_audit(
         db, actor=f"user:{user.id}", action="user.register",
@@ -131,7 +162,6 @@ async def register(
     )
     await db.commit()
 
-    # Send email (non-blocking on failure)
     sent = await send_verification_email(email, plain_token)
 
     return {
@@ -139,8 +169,6 @@ async def register(
         "email": email,
         "status": "pending_verification",
         "verification_email_sent": sent,
-        # In dev (no SMTP configured), the token is in the journal — admin can
-        # forward it. In prod, the email goes out automatically.
     }
 
 
