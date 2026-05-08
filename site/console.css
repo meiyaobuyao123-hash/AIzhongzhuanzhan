@@ -799,3 +799,13 @@ code, .mono {
   transform: rotate(45deg);
 }
 .cs-nav-external:hover .cs-icon-ext { opacity: 0.9; }
+
+/* Brand block as clickable home link */
+a.cs-brand-link {
+  text-decoration: none;
+  border-radius: var(--r-sm);
+  margin: -10px -12px 0;
+  padding: 10px 12px 22px;
+  transition: background 120ms;
+}
+a.cs-brand-link:hover { background: var(--bg-elevated); }

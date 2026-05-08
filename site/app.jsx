@@ -36,10 +36,30 @@ function App() {
 
 function TopNav() {
   const [scrolled, setScrolled] = useStateApp(false);
+  const [loggedIn, setLoggedIn] = useStateApp(false);
+  const [userEmail, setUserEmail] = useStateApp('');
+
   useEffectApp(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Detect existing login by checking the same JWT key the console uses.
+  useEffectApp(() => {
+    const token = localStorage.getItem('prism_token');
+    const exp = localStorage.getItem('prism_token_expires');
+    if (!token) return;
+    // If we know the expiry and it's already past, treat as logged out.
+    if (exp && new Date(exp).getTime() < Date.now()) return;
+    setLoggedIn(true);
+    // Best-effort fetch /account/me for the email display (non-blocking).
+    fetch('/suanli-api/account/me', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.email) setUserEmail(d.email); })
+      .catch(() => {});
   }, []);
 
   return (
@@ -77,11 +97,27 @@ function TopNav() {
         </div>
 
         <div className="nav-right">
-          <a className="nav-login" href="/login">登录</a>
-          <a className="cta-primary nav-cta" href="/signup">
-            立即开始
-            <Arrow2/>
-          </a>
+          {loggedIn ? (
+            <>
+              {userEmail && (
+                <span className="nav-user mono" title={userEmail}>
+                  {userEmail.length > 22 ? userEmail.slice(0, 20) + '…' : userEmail}
+                </span>
+              )}
+              <a className="cta-primary nav-cta" href="/console">
+                进入控制台
+                <Arrow2/>
+              </a>
+            </>
+          ) : (
+            <>
+              <a className="nav-login" href="/login">登录</a>
+              <a className="cta-primary nav-cta" href="/signup">
+                立即开始
+                <Arrow2/>
+              </a>
+            </>
+          )}
         </div>
       </div>
     </nav>

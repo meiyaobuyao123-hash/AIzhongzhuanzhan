@@ -98,10 +98,10 @@ function ConsoleApp() {
   return (
     <div className="cs-shell">
       <aside className="cs-sidebar">
-        <div className="cs-brand">
+        <a href="/suanli/" className="cs-brand cs-brand-link" title="回首页">
           <span className="cs-brand-mark">P</span>
           <span className="cs-brand-name">Prism</span>
-        </div>
+        </a>
         {TABS.map(t => (
           <a key={t.id} href={`#${t.id}`}
              className={`cs-nav-link ${tab === t.id ? 'active' : ''}`}>

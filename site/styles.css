@@ -171,6 +171,15 @@ input, textarea, select { font-family: inherit; }
   transition: color var(--dur-hover) var(--ease-out);
 }
 .nav-login:hover { color: var(--text-primary); }
+.nav-user {
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .nav-cta {
   font-size: 13px;
   padding: 8px 16px;
