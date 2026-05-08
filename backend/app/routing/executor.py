@@ -86,7 +86,10 @@ async def execute_with_retry(
 
     for attempt_idx in range(MAX_ATTEMPTS):
         try:
-            channel = await pick_one(model, db, redis_client, exclude=tried)
+            channel = await pick_one(
+                model, db, redis_client,
+                exclude=tried, request_body=request_body,
+            )
         except NoChannelAvailable as exc:
             last_error = exc
             break
@@ -96,11 +99,17 @@ async def execute_with_retry(
         attempts.append(attempt)
 
         provider = make_provider(channel, settings.master_key)
+        # Strip Prism-internal hint fields (e.g. __prism_user_id) before forwarding.
+        # Upstream APIs might reject unknown fields, and we never want to leak our
+        # routing metadata.
+        upstream_body = {
+            k: v for k, v in request_body.items() if not k.startswith("__prism_")
+        }
         try:
             if method == "messages":
-                upstream = await provider.messages(request_body, stream=is_streaming)
+                upstream = await provider.messages(upstream_body, stream=is_streaming)
             elif method == "chat_completions":
-                upstream = await provider.chat_completions(request_body, stream=is_streaming)
+                upstream = await provider.chat_completions(upstream_body, stream=is_streaming)
             else:
                 raise ValueError(f"Unknown method: {method}")
         except httpx.HTTPError as exc:
@@ -120,6 +129,12 @@ async def execute_with_retry(
         if upstream.status_code < 300:
             # Success path
             await mark_channel_success(channel.id, redis_client)
+            # v0.3 C1: record sticky route for prompt-cache requests
+            try:
+                from app.routing.sticky import record_sticky
+                await record_sticky(model, request_body, channel.id, redis_client)
+            except Exception:
+                pass  # sticky failure must not break the request
             if is_streaming:
                 return ExecutionResult(
                     channel=channel, upstream=upstream, response_body=None,

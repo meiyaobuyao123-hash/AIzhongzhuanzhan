@@ -102,10 +102,15 @@ async def post_messages(
     is_streaming = bool(body.get("stream"))
     redis = get_redis()
 
+    # v0.3 C1: tag the body so sticky-routing can read user_id without leaking
+    # it to upstream (we strip it before forwarding via dict copy in providers,
+    # but defensively check anyway in oai_request_to_anth/etc.)
+    body_with_uid = {**body, "__prism_user_id": user.id}
+
     try:
         result = await execute_with_retry(
             model=model,
-            request_body=body,
+            request_body=body_with_uid,
             is_streaming=is_streaming,
             db=db,
             redis_client=redis,

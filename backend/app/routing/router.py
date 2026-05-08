@@ -64,15 +64,49 @@ async def filter_healthy(
     return healthy
 
 
-def weighted_pick(candidates: list[Channel]) -> Channel:
-    """Pick one by Channel.weight as random.choices weights.
+def weighted_pick(
+    candidates: list[Channel], model: Model | None = None
+) -> Channel:
+    """Pick one by weighted random.
 
-    v0.2: simple weighted random. v0.3 will overlay price²-inverse weighting +
-    health bias.
+    v0.3: when ``model`` is provided, overlay price²-inverse weighting:
+        weight_i = (1 / unit_cost_i)² × channel.weight
+
+    Cheaper channels get quadratically higher selection probability, while
+    expensive ones still appear with non-zero probability (redundancy).
+    Only effective when the channel pool has heterogeneous pricing — for
+    homogeneous channels (same provider, same model) it degrades to plain
+    Channel.weight (the price factor cancels out).
+
+    v0.2 fallback: when ``model`` is None, use simple Channel.weight.
     """
     if not candidates:
         raise NoChannelAvailable("No candidate channels to pick from")
-    weights = [max(1, c.weight) for c in candidates]
+
+    if model is None:
+        weights = [max(1, c.weight) for c in candidates]
+        return random.choices(candidates, weights=weights, k=1)[0]
+
+    # Per-channel unit cost in micro-cents per million tokens (input + output).
+    # In v0.3 channels share the model's catalog price, so this is a constant
+    # across same-model candidates. Hooks here for future per-channel discount.
+    unit_cost = max(1, model.price_input_per_million + model.price_output_per_million)
+
+    weights: list[float] = []
+    for c in candidates:
+        # (1 / cost)² scaled to a manageable range, then ×channel.weight
+        # We use cost / 1e9 to avoid float blow-up
+        scaled_cost = unit_cost / 1_000_000_000  # → ~1.0 ballpark for $1/M
+        if scaled_cost <= 0:
+            weights.append(0)
+            continue
+        w = (1.0 / scaled_cost) ** 2
+        w *= max(1, c.weight)
+        weights.append(w)
+
+    if sum(weights) == 0:
+        # All zero (shouldn't happen) → fall back to uniform
+        return random.choice(candidates)
     return random.choices(candidates, weights=weights, k=1)[0]
 
 
@@ -82,6 +116,7 @@ async def pick_one(
     redis_client,
     *,
     exclude: set[int] | None = None,
+    request_body: dict | None = None,
 ) -> Channel:
     """End-to-end candidate selection. Used inside the executor's retry loop.
 
@@ -120,7 +155,19 @@ async def pick_one(
     # Take only the highest-priority tier
     max_priority = max(c.priority for c in healthy)
     top_tier = [c for c in healthy if c.priority == max_priority]
-    return weighted_pick(top_tier)
+
+    # v0.3: prompt-cache sticky routing — if the request had cache_control and
+    # we've previously routed the same fingerprint to a still-healthy channel,
+    # keep it there to maximise cache hit rate.
+    if request_body is not None and len(top_tier) > 1:
+        from app.routing.sticky import lookup_sticky
+        sticky_id = await lookup_sticky(model, request_body, redis_client)
+        if sticky_id is not None:
+            for ch in top_tier:
+                if ch.id == sticky_id and ch.id not in (exclude or set()):
+                    return ch
+
+    return weighted_pick(top_tier, model)
 
 
 # Backwards-compat shim for v0.1 tests (single-channel `route`)

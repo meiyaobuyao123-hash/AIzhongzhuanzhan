@@ -100,10 +100,12 @@ async def post_chat_completions(
     is_streaming = bool(body.get("stream"))
     redis = get_redis()
 
+    body_with_uid = {**body, "__prism_user_id": user.id}
+
     try:
         result = await execute_with_retry(
             model=model,
-            request_body=body,
+            request_body=body_with_uid,
             is_streaming=is_streaming,
             db=db,
             redis_client=redis,
