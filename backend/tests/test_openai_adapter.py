@@ -142,3 +142,29 @@ def test_streaming_no_usage_in_intermediate_chunks():
     )
     events = list(p.extract_streaming_usage_events(intermediate))
     assert events == []
+
+
+def test_chat_completions_path_detection():
+    """v0.3 fix: derive correct chat-completions path from base_url
+    so non-standard upstreams (Doubao /api/v3, ...) work without hardcoded /v1."""
+    from app.providers.openai import chat_completions_path
+
+    # Vanilla / DeepSeek / Anthropic-OAI-compat — default /v1/chat/completions
+    assert chat_completions_path("https://api.openai.com") == "/v1/chat/completions"
+    assert chat_completions_path("https://api.openai.com/") == "/v1/chat/completions"
+    assert chat_completions_path("https://api.deepseek.com") == "/v1/chat/completions"
+    assert chat_completions_path("https://api.minimaxi.com") == "/v1/chat/completions"
+
+    # Already has /v1 in path → just /chat/completions
+    assert chat_completions_path("https://api.openai.com/v1") == "/chat/completions"
+    assert chat_completions_path("https://api.minimaxi.com/v1") == "/chat/completions"
+
+    # Volcengine Doubao /api/v3
+    assert chat_completions_path(
+        "https://ark.cn-beijing.volces.com/api/v3"
+    ) == "/chat/completions"
+
+    # Trailing slash variants
+    assert chat_completions_path(
+        "https://ark.cn-beijing.volces.com/api/v3/"
+    ) == "/chat/completions"

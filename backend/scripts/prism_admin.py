@@ -409,8 +409,9 @@ def channel_test(id_: Annotated[int, typer.Option("--id", help="Channel ID")]) -
                         },
                     )
                 elif ch.provider == "openai":
+                    from app.providers.openai import chat_completions_path
                     resp = await client.post(
-                        "/v1/chat/completions",
+                        chat_completions_path(ch.base_url),
                         headers={"Authorization": f"Bearer {upstream_key}"},
                         json={
                             "model": model_id,

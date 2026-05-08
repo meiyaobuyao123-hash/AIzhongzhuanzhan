@@ -6,14 +6,29 @@ requests so OpenAI returns a final usage chunk (which it omits by default).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
 from app.providers._sse import iter_sse_data_jsons
 from app.providers.base import Provider, register_provider
 from app.schemas.common import Usage
+
+
+def chat_completions_path(base_url: str) -> str:
+    """Return the /chat/completions path to append, accounting for upstreams
+    that already have an API version in their base_url (e.g. Volcengine
+    Doubao = `…/api/v3`, MiniMax `…/v1`). If the base_url path ends with
+    a version segment, only append `/chat/completions`. Otherwise default
+    to `/v1/chat/completions` (vanilla OpenAI / DeepSeek style).
+    """
+    path = urlparse(base_url).path.rstrip("/")
+    if re.search(r"/v\d+$", path) or re.search(r"/api/v\d+$", path):
+        return "/chat/completions"
+    return "/v1/chat/completions"
 
 
 @register_provider
@@ -29,9 +44,10 @@ class OpenAIProvider(Provider):
             opts.setdefault("include_usage", True)
             body["stream_options"] = opts
 
+        path = chat_completions_path(str(self.client.base_url))
         request = self.client.build_request(
             "POST",
-            "/v1/chat/completions",
+            path,
             headers={
                 "Authorization": f"Bearer {self.upstream_key}",
                 "content-type": "application/json",
