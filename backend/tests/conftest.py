@@ -18,6 +18,10 @@ os.environ["PRISM_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["PRISM_MASTER_KEY_HEX"] = "0" * 63 + "1"  # 32 bytes, deterministic
 os.environ["PRISM_DEBUG"] = "false"
 os.environ["PRISM_JWT_SECRET"] = "test-jwt-secret-do-not-use-in-prod"
+# v0.3: disable background loops by default. Tests that exercise them will
+# call the helpers directly rather than through the lifespan.
+os.environ["PRISM_CHAIN_MONITORS"] = ""
+os.environ["PRISM_CAPACITY_CHECK_INTERVAL_S"] = "999999"
 
 
 @pytest.fixture(autouse=True)

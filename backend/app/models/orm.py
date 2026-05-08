@@ -344,6 +344,20 @@ class PaymentIntent(Base):
     network: Mapped[str | None] = mapped_column(String(32), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # v0.3: chain-watch fields. expected_amount_micro_cents is what the chain
+    # monitor matches against (= amount_micro_cents + memo-suffix-disambiguator).
+    # tx_hash is unique once paid, providing dedupe protection.
+    expected_amount_micro_cents: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    memo: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    tx_hash: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, unique=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
@@ -357,10 +371,11 @@ class PaymentIntent(Base):
             name="ck_payment_channel",
         ),
         CheckConstraint(
-            "status IN ('pending','paid','failed','refunded')",
+            "status IN ('pending','paid','failed','refunded','expired')",
             name="ck_payment_status",
         ),
         Index("idx_payment_user_status", "user_id", "status"),
+        Index("idx_payment_pending_expected", "status", "expected_amount_micro_cents"),
     )
 
 
@@ -381,6 +396,29 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow, index=True
     )
+
+
+# =============================================================================
+# v0.3: chain_monitor_state (per-network scan progress)
+# =============================================================================
+
+
+class ChainMonitorState(Base):
+    """One row per chain. Drives resumable scanning so a restart doesn't
+    re-scan the entire history (or worse, miss txs while we were down)."""
+
+    __tablename__ = "chain_monitor_state"
+
+    network: Mapped[str] = mapped_column(String(32), primary_key=True)
+    last_block_height: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    last_tx_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_scanned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 # =============================================================================

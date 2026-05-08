@@ -69,6 +69,52 @@ class Settings(BaseSettings):
     smtp_from: str = "Prism <noreply@ai100trading.cn>"
     frontend_base: str = "https://www.ai100trading.cn"
 
+    # v0.3 chain monitors — comma-separated list of enabled chains.
+    # Set to "" to disable all (e.g. local dev where you don't want background polling).
+    chain_monitors: str = "tron,solana,evm"
+    chain_poll_interval_s: int = 30
+    chain_topup_intent_ttl_min: int = 30
+
+    # USDT receive addresses (also surfaced on the homepage)
+    chain_tron_address: str = "TT24g41HLptouzxGycZxQKmWaTENK4K4HG"
+    chain_solana_address: str = "66p5tnV6Fd7x5QmRE6X772PMVmVUVgozRzATJ4Ns9iQn"
+    chain_evm_address: str = "0xC862ff9Fd79D180950E546DBB8b108d5c9c38582"
+
+    # USDT contract addresses
+    tron_usdt_contract: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+    solana_usdc_mint: str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    bsc_usdt_contract: str = "0x55d398326f99059fF775485246999027B3197955"
+    polygon_usdt_contract: str = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"
+    arbitrum_usdt_contract: str = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
+    ethereum_usdt_contract: str = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+
+    # Default EVM sub-chain (the one we tell users to send USDT on first)
+    evm_default_chain: str = "bsc"
+
+    # Public RPC / Etherscan-style API endpoints
+    tron_api_base: str = "https://api.trongrid.io"
+    solana_rpc_url: str = "https://api.mainnet-beta.solana.com"
+    bscscan_api_base: str = "https://api.bscscan.com/api"
+    polygonscan_api_base: str = "https://api.polygonscan.com/api"
+    arbiscan_api_base: str = "https://api.arbiscan.io/api"
+    etherscan_api_base: str = "https://api.etherscan.io/api"
+
+    # Optional API keys (improve rate limits)
+    trongrid_api_key: str = ""
+    bscscan_api_key: str = ""
+    polygonscan_api_key: str = ""
+    arbiscan_api_key: str = ""
+    etherscan_api_key: str = ""
+
+    # v0.3 capacity alerts
+    capacity_window_min: int = 5
+    capacity_check_interval_s: int = 60
+    capacity_5xx_warn_pct: float = 5.0
+    capacity_rpm_warn_pct: float = 80.0
+    capacity_default_rpm_quota: int = 1000  # used if channel.rpm_quota not set
+    capacity_alert_debounce_min: int = 30
+    admin_alert_emails: str = ""  # comma-separated
+
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")

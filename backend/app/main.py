@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -21,8 +22,35 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     logger.info("prism_starting", host=settings.host, port=settings.port)
-    yield
-    logger.info("prism_shutdown")
+
+    # v0.3: chain monitors + capacity-alert loop run as background tasks.
+    # Both are no-ops if disabled via settings.
+    chain_tasks: list[asyncio.Task] = []
+    capacity_task: asyncio.Task | None = None
+    try:
+        from app.payments.monitor import cancel_tasks, start_all_monitors
+        chain_tasks = await start_all_monitors()
+    except Exception as exc:
+        logger.error("chain_monitors_start_failed", error=str(exc))
+
+    try:
+        from app.monitoring.capacity import start_capacity_loop
+        capacity_task = await start_capacity_loop()
+    except Exception as exc:
+        logger.error("capacity_loop_start_failed", error=str(exc))
+
+    try:
+        yield
+    finally:
+        if capacity_task is not None:
+            capacity_task.cancel()
+            try:
+                await capacity_task
+            except (asyncio.CancelledError, Exception):
+                pass
+        if chain_tasks:
+            await cancel_tasks(chain_tasks)
+        logger.info("prism_shutdown")
 
 
 app = FastAPI(
