@@ -53,6 +53,7 @@ usage_app = typer.Typer(no_args_is_help=True, help="Usage stats / reporting")
 audit_app = typer.Typer(no_args_is_help=True, help="View admin audit log")
 oauth_app = typer.Typer(no_args_is_help=True, help="Configure OAuth providers")
 capacity_app = typer.Typer(no_args_is_help=True, help="Capacity monitor (RPM/TPM/5xx)")
+email_app = typer.Typer(no_args_is_help=True, help="Email provider diagnostics")
 app.add_typer(user_app, name="user")
 app.add_typer(key_app, name="key")
 app.add_typer(channel_app, name="channel")
@@ -62,6 +63,7 @@ app.add_typer(usage_app, name="usage")
 app.add_typer(audit_app, name="audit")
 app.add_typer(oauth_app, name="oauth")
 app.add_typer(capacity_app, name="capacity")
+app.add_typer(email_app, name="email")
 
 
 def _run(coro):
@@ -916,6 +918,56 @@ def capacity_report(
                     )
             else:
                 console.print("\n[green]All channels within thresholds.[/]")
+
+    _run(_go())
+
+
+# =============================================================================
+# email subcommands
+# =============================================================================
+
+
+@email_app.command("status")
+def email_status() -> None:
+    """Show which email provider would be used by send_email."""
+    from app.email import email_provider_status
+    s = email_provider_status()
+    if s["configured"]:
+        console.print(f"[green]✓[/] Provider: [bold]{s['provider']}[/]")
+        for k, v in s.items():
+            if k in ("provider", "configured"):
+                continue
+            console.print(f"  {k}: {v}")
+    else:
+        console.print(f"[yellow]✗[/] Provider: [bold]{s['provider']}[/] (emails are NOT being sent)")
+        console.print(f"  hint: {s.get('hint', '')}")
+
+
+@email_app.command("test")
+def email_test(
+    to: Annotated[str, typer.Option(help="Recipient email")],
+    subject: Annotated[str, typer.Option(help="Subject")] = "Prism — SMTP test",
+) -> None:
+    """Send a test email to verify the configured provider works."""
+    from app.email import email_provider_status, send_email
+
+    async def _go():
+        status = email_provider_status()
+        console.print(f"Provider: [bold]{status['provider']}[/]")
+        body = (
+            f"This is a test email from Prism.\n\n"
+            f"Provider: {status['provider']}\n"
+            f"If you see this, email delivery is working.\n\n"
+            f"— Prism · cost = price · always"
+        )
+        ok = await send_email(to, subject, body)
+        if ok:
+            console.print(f"[green]✓[/] Sent to {to}")
+        else:
+            console.print(
+                f"[red]✗[/] Send failed (or no provider configured). "
+                f"Check journalctl -u prism for details."
+            )
 
     _run(_go())
 

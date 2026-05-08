@@ -61,7 +61,11 @@ class Settings(BaseSettings):
     oauth_google_client_secret: str = ""
     oauth_redirect_base: str = "https://www.ai100trading.cn/suanli-api"
 
-    # SMTP (empty = verification logs to journal)
+    # Email — pick ONE provider. Order of precedence:
+    #   1. Resend (HTTP API; easiest — sign up at resend.com, get key)
+    #   2. SMTP (if smtp_host + smtp_user set)
+    #   3. Fallback: log link to journal (current state)
+    resend_api_key: str = ""
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
