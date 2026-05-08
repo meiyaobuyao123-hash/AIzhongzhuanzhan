@@ -2,12 +2,49 @@
 
 const { useState, useEffect, useCallback } = React;
 
+/* ── Icon system: Lucide-style inline SVGs (no third-party deps) ──────── */
+
+const ICON_PATHS = {
+  // Nav icons
+  home:      '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  key:       '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
+  chart:     '<path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-5"/>',
+  wallet:    '<path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h16v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><circle cx="17" cy="14" r="1.5"/>',
+  settings:  '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  // Metric icons
+  zap:       '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  arrowDown: '<line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>',
+  arrowUp:   '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>',
+  dollar:    '<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  // Misc
+  copy:      '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  x:         '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  check:     '<polyline points="20 6 9 17 4 12"/>',
+  chevronDown:  '<polyline points="6 9 12 15 18 9"/>',
+  chevronRight: '<polyline points="9 18 15 12 9 6"/>',
+  // Pay icons (for USDT cards — geometric shapes)
+  diamond:   '<rect x="3" y="11" width="18" height="11" rx="2"/><circle cx="12" cy="16" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  hexagon:   '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+  circle:    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>',
+};
+
+function Icon({ name, size = 16, className = '', color }) {
+  const path = ICON_PATHS[name];
+  if (!path) return null;
+  return (
+    <svg className={`cs-icon ${className}`} width={size} height={size} viewBox="0 0 24 24"
+         fill="none" stroke={color || 'currentColor'} strokeWidth="1.75"
+         strokeLinecap="round" strokeLinejoin="round"
+         dangerouslySetInnerHTML={{ __html: path }}/>
+  );
+}
+
 const TABS = [
-  { id: 'overview', label: '概览', en: 'overview' },
-  { id: 'keys',     label: 'API Keys', en: 'keys' },
-  { id: 'usage',    label: '用量', en: 'usage' },
-  { id: 'billing',  label: '充值', en: 'billing' },
-  { id: 'settings', label: '设置', en: 'settings' },
+  { id: 'overview', label: '概览',     icon: 'home' },
+  { id: 'keys',     label: 'API Keys', icon: 'key' },
+  { id: 'usage',    label: '用量',     icon: 'chart' },
+  { id: 'billing',  label: '充值',     icon: 'wallet' },
+  { id: 'settings', label: '设置',     icon: 'settings' },
 ];
 
 function getTabFromHash() {
@@ -61,11 +98,13 @@ function ConsoleApp() {
     <div className="cs-shell">
       <aside className="cs-sidebar">
         <div className="cs-brand">
+          <span className="cs-brand-mark">P</span>
           <span className="cs-brand-name">Prism</span>
         </div>
         {TABS.map(t => (
           <a key={t.id} href={`#${t.id}`}
              className={`cs-nav-link ${tab === t.id ? 'active' : ''}`}>
+            <Icon name={t.icon}/>
             <span>{t.label}</span>
           </a>
         ))}
@@ -163,7 +202,11 @@ function Metric({ label, value, meta, icon, accent }) {
   return (
     <div className={`cs-metric ${accentClass}`}>
       <div className="cs-metric-head">
-        {icon && <span className="cs-metric-icon">{icon}</span>}
+        {icon && (
+          <span className="cs-metric-icon">
+            {typeof icon === 'string' ? <Icon name={icon} size={15}/> : icon}
+          </span>
+        )}
         <div className="cs-metric-label">{label}</div>
       </div>
       <div className="cs-metric-value">{value}</div>
@@ -508,13 +551,13 @@ function Usage() {
       {/* Summary cards */}
       <div className="cs-summary-cards">
         <Metric label="请求数" value={fmtCompact(summary.total_requests || 0)}
-                meta="该时间段" icon="⚡" accent="cyan"/>
+                meta="该时间段" icon="zap" accent="cyan"/>
         <Metric label="输入 tokens" value={fmtCompact(summary.total_input_tokens || 0)}
-                icon="↓" accent="purple"/>
+                icon="arrowDown" accent="purple"/>
         <Metric label="输出 tokens" value={fmtCompact(summary.total_output_tokens || 0)}
-                icon="↑" accent="magenta"/>
+                icon="arrowUp" accent="magenta"/>
         <Metric label="总成本" value={fmtUSD(summary.total_cost_usd || 0)}
-                meta="cost = price · 0% 加价" icon="$" accent="green"/>
+                meta="cost = price · 0% 加价" icon="dollar" accent="green"/>
       </div>
 
       {/* Aggregate section */}
@@ -762,11 +805,11 @@ function RequestDetailModal({ d, onClose }) {
 
 const USDT_CHANNELS = [
   { key: 'usdt-trc20', title: 'USDT (TRC20)', en: 'Tron · 国内首选',
-    note: '链上费 ≈ $1 · 推荐金额 ≥ $50', icon: 'T', accent: '#EF4444' },
+    note: '链上费 ≈ $1 · 推荐金额 ≥ $50',     icon: 'diamond', accent: '#DC2626' },
   { key: 'usdt-sol',   title: 'USDT (Solana)', en: 'SPL · 美区首选',
-    note: '链上费 ≈ $0.001 · 任意金额', icon: '◎', accent: '#9333EA' },
+    note: '链上费 ≈ $0.001 · 任意金额',       icon: 'circle',  accent: '#7C3AED' },
   { key: 'usdt-evm',   title: 'USDT (EVM)', en: 'BSC / Polygon / Arbitrum / ETH',
-    note: 'BSC 链上费 ≈ $0.3 · 推荐 BSC', icon: '⬢', accent: '#06B6D4' },
+    note: 'BSC 链上费 ≈ $0.3 · 推荐 BSC',     icon: 'hexagon', accent: '#0891B2' },
 ];
 
 function Billing({ me }) {
@@ -888,10 +931,12 @@ function UsdtCard({ channel, onStart, loading }) {
     <div className="cs-pay-card" style={{borderColor: channel.accent + '40'}}>
       <div className="cs-pay-card-head">
         <span className="cs-pay-icon" style={{
-          background: channel.accent + '20',
+          background: channel.accent + '14',
           color: channel.accent,
-          borderColor: channel.accent + '40',
-        }}>{channel.icon}</span>
+          borderColor: channel.accent + '33',
+        }}>
+          <Icon name={channel.icon} size={20}/>
+        </span>
         <div>
           <div className="cs-pay-card-title">{channel.title}</div>
           <div className="cs-pay-card-en mono">{channel.en}</div>
