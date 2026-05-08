@@ -585,12 +585,12 @@ function Billing({ me }) {
         </p>
         <div className="cs-pay-grid">
           <DomesticPayCard
-            title="支付宝" en="Alipay"
-            qrUrl="/suanli/qr-alipay.png"
+            title="支付宝" en="Alipay · 君 (**瑞)"
+            qrUrl="/suanli/qr-alipay.jpg"
             tone="alipay"/>
           <DomesticPayCard
-            title="微信支付" en="WeChat Pay"
-            qrUrl="/suanli/qr-wechat.png"
+            title="微信支付" en="WeChat Pay · 六一学长 (**瑞)"
+            qrUrl="/suanli/qr-wechat.jpg"
             tone="wechat"/>
         </div>
       </section>
