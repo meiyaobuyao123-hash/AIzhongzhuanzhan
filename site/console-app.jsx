@@ -333,51 +333,175 @@ function CreatedKeyModal({ data, onClose }) {
 /* ─── Usage ──────────────────────────────────────────────────────────────── */
 
 function Usage() {
-  const [stats, setStats] = useState(null);
+  // ── Filter state ──────────────────────────────────────────────────────────
+  // Defaults: last 7 days, all models, all statuses
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const weekAgo = new Date(today.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+
+  const [filters, setFilters] = useState({
+    since: weekAgo,
+    until: todayStr,
+    model: '',
+    status: '',
+  });
+
+  // ── Aggregate group-by tab ────────────────────────────────────────────────
   const [groupBy, setGroupBy] = useState('model');
-  const [requests, setRequests] = useState([]);
+  const [expanded, setExpanded] = useState(null);  // channel id whose row is open
+
+  // ── Pagination state for the detail log ───────────────────────────────────
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const [stats, setStats] = useState(null);
+  const [requests, setRequests] = useState({ data: [], total: 0, pages: 0 });
+  const [models, setModels] = useState([]);          // for the dropdown
   const [detail, setDetail] = useState(null);
+  const [loadingPage, setLoadingPage] = useState(false);
+
+  // Build query string from current filters
+  const buildParams = (extra = {}) => {
+    const p = new URLSearchParams();
+    if (filters.since) p.set('since', new Date(filters.since + 'T00:00:00Z').toISOString());
+    if (filters.until) p.set('until', new Date(filters.until + 'T23:59:59Z').toISOString());
+    if (filters.model) p.set('model', filters.model);
+    if (filters.status) p.set('status', filters.status);
+    Object.entries(extra).forEach(([k, v]) => p.set(k, v));
+    return p.toString();
+  };
+
+  // ── Fetch effects ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    PrismAPI.get(`/usage/stats?${buildParams({ group_by: groupBy })}`)
+      .then(setStats).catch(() => {});
+  }, [groupBy, filters.since, filters.until, filters.model, filters.status]);
 
   useEffect(() => {
-    PrismAPI.get(`/usage/stats?group_by=${groupBy}`).then(setStats).catch(() => {});
-  }, [groupBy]);
+    setLoadingPage(true);
+    PrismAPI.get(`/usage/requests?${buildParams({ page, size: pageSize })}`)
+      .then(setRequests)
+      .catch(() => setRequests({ data: [], total: 0, pages: 0 }))
+      .finally(() => setLoadingPage(false));
+  }, [page, pageSize, filters.since, filters.until, filters.model, filters.status]);
 
   useEffect(() => {
-    PrismAPI.get('/usage/requests?size=50').then(d => setRequests(d.data || []));
+    PrismAPI.get('/usage/models').then(d => setModels(d.data || [])).catch(() => {});
   }, []);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [filters.since, filters.until, filters.model, filters.status]);
 
   // Hash deep link: /console#usage/{request_id}
   useEffect(() => {
-    const m = location.hash.match(/^#usage\/([\w-]+)$/);
-    if (m) PrismAPI.get(`/usage/requests/${m[1]}`).then(setDetail);
-    else setDetail(null);
     const handler = () => {
       const m = location.hash.match(/^#usage\/([\w-]+)$/);
       if (m) PrismAPI.get(`/usage/requests/${m[1]}`).then(setDetail);
       else setDetail(null);
     };
+    handler();
     window.addEventListener('hashchange', handler);
     return () => window.removeEventListener('hashchange', handler);
   }, []);
 
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const summary = stats?.summary || {};
+  const aggData = stats?.data || [];
+  const total = requests.total || 0;
+  const pages = requests.pages || 0;
+  const fromN = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const toN   = Math.min(page * pageSize, total);
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="cs-row" style={{marginBottom: 16, gap: 6}}>
-        <span style={{fontSize: 12, color: 'var(--text-muted)', marginRight: 8}}>聚合：</span>
-        {['model', 'channel', 'key', 'day'].map(g => (
-          <button key={g} className={`cs-btn ${groupBy === g ? 'cs-btn-primary' : ''}`}
-            onClick={() => setGroupBy(g)} style={{fontSize: 12, padding: '6px 12px'}}>
-            {g}
+      {/* Filter bar */}
+      <div className="cs-filter-bar">
+        <div>
+          <label className="cs-filter-label">起始日期</label>
+          <input className="cs-input cs-input-date" type="date"
+            value={filters.since}
+            onChange={e => setFilters({...filters, since: e.target.value})}/>
+        </div>
+        <div>
+          <label className="cs-filter-label">结束日期</label>
+          <input className="cs-input cs-input-date" type="date"
+            value={filters.until}
+            onChange={e => setFilters({...filters, until: e.target.value})}/>
+        </div>
+        <div>
+          <label className="cs-filter-label">模型</label>
+          <select className="cs-input"
+            value={filters.model}
+            onChange={e => setFilters({...filters, model: e.target.value})}>
+            <option value="">全部模型</option>
+            {models.map(m => (
+              <option key={m.model_id} value={m.model_id}>
+                {m.model_id} ({m.requests})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="cs-filter-label">状态</label>
+          <select className="cs-input"
+            value={filters.status}
+            onChange={e => setFilters({...filters, status: e.target.value})}>
+            <option value="">全部状态</option>
+            <option value="ok">ok</option>
+            <option value="error">error</option>
+            <option value="partial">partial</option>
+            <option value="cancelled">cancelled</option>
+          </select>
+        </div>
+        <div style={{alignSelf: 'flex-end'}}>
+          <button className="cs-btn"
+            onClick={() => setFilters({since: weekAgo, until: todayStr, model: '', status: ''})}>
+            重置
           </button>
-        ))}
+        </div>
       </div>
 
-      {stats && (
-        <section className="cs-section">
+      {/* Summary cards */}
+      <div className="cs-summary-cards">
+        <Metric label="请求数" value={fmtCompact(summary.total_requests || 0)}
+                meta="该时间段"/>
+        <Metric label="输入 tokens" value={fmtCompact(summary.total_input_tokens || 0)}/>
+        <Metric label="输出 tokens" value={fmtCompact(summary.total_output_tokens || 0)}/>
+        <Metric label="总成本" value={fmtUSD(summary.total_cost_usd || 0)}
+                meta="cost = price · 0% 加价"/>
+      </div>
+
+      {/* Aggregate section */}
+      <section className="cs-section">
+        <div className="cs-section-head">
+          <h2>汇总</h2>
+          <div className="cs-row" style={{gap: 6}}>
+            <span style={{fontSize: 12, color: 'var(--text-muted)', marginRight: 6}}>分组：</span>
+            {[
+              {id: 'model', label: '按模型'},
+              {id: 'channel', label: '按渠道（可展开）'},
+              {id: 'day', label: '按日期'},
+              {id: 'key', label: '按 Key'},
+            ].map(g => (
+              <button key={g.id}
+                className={`cs-btn ${groupBy === g.id ? 'cs-btn-primary' : ''}`}
+                onClick={() => { setGroupBy(g.id); setExpanded(null); }}
+                style={{fontSize: 12, padding: '6px 12px'}}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {aggData.length === 0 ? (
+          <div className="cs-empty">该时间段无请求数据</div>
+        ) : (
           <table className="cs-table">
             <thead>
               <tr>
-                <th>{groupBy}</th>
+                <th>{groupByLabel(groupBy)}</th>
                 <th>请求数</th>
                 <th>输入 tokens</th>
                 <th>输出 tokens</th>
@@ -386,52 +510,120 @@ function Usage() {
               </tr>
             </thead>
             <tbody>
-              {(stats.data || []).map((r, i) => (
-                <tr key={i}>
-                  <td className="mono">{r.bucket || '-'}</td>
-                  <td>{fmtCompact(r.requests)}</td>
-                  <td className="mono">{fmtCompact(r.input_tokens)}</td>
-                  <td className="mono">{fmtCompact(r.output_tokens)}</td>
+              {aggData.map((r, i) => {
+                const isChannel = groupBy === 'channel';
+                const childKey = parseInt(r.bucket || '0', 10);
+                const isOpen = isChannel && expanded === childKey;
+                const expandable = isChannel && (r.models || []).length > 0;
+                const display = isChannel
+                  ? (r.channel_name ? `${r.channel_name} (#${r.bucket})` : `(unrouted)`)
+                  : (r.bucket || '-');
+                return (
+                  <React.Fragment key={i}>
+                    <tr
+                      className={expandable ? 'cs-row-expandable' : ''}
+                      onClick={expandable ? () => setExpanded(isOpen ? null : childKey) : undefined}
+                      style={expandable ? {cursor: 'pointer'} : undefined}
+                    >
+                      <td className="mono">
+                        {expandable && (
+                          <span style={{display: 'inline-block', width: 14}}>
+                            {isOpen ? '▾' : '▸'}
+                          </span>
+                        )}
+                        {display}
+                      </td>
+                      <td>{fmtCompact(r.requests)}</td>
+                      <td className="mono">{fmtCompact(r.input_tokens)}</td>
+                      <td className="mono">{fmtCompact(r.output_tokens)}</td>
+                      <td>{fmtUSD(r.cost_usd)}</td>
+                      <td className="mono">{r.avg_latency_ms ? r.avg_latency_ms + 'ms' : '-'}</td>
+                    </tr>
+                    {isOpen && (r.models || []).map(m => (
+                      <tr key={`${i}:${m.model_id}`} className="cs-row-child">
+                        <td className="mono" style={{paddingLeft: 36}}>↳ {m.model_id}</td>
+                        <td>{fmtCompact(m.requests)}</td>
+                        <td className="mono">{fmtCompact(m.input_tokens)}</td>
+                        <td className="mono">{fmtCompact(m.output_tokens)}</td>
+                        <td>{fmtUSD(m.cost_usd)}</td>
+                        <td>—</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* Detail log section */}
+      <section className="cs-section">
+        <div className="cs-section-head">
+          <h2>请求明细</h2>
+          <div className="cs-page-ctrl">
+            <span className="mono cs-page-info">
+              {total === 0 ? '0 条' : `${fromN}–${toN} / 共 ${total} 条`}
+            </span>
+            <select className="cs-input"
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+              style={{width: 90}}>
+              <option value={25}>25 / 页</option>
+              <option value={50}>50 / 页</option>
+              <option value={100}>100 / 页</option>
+            </select>
+            <button className="cs-btn" disabled={page <= 1 || loadingPage}
+              onClick={() => setPage(p => Math.max(1, p - 1))}>← 上一页</button>
+            <span className="mono cs-page-info">
+              {pages > 0 ? `${page} / ${pages}` : '-'}
+            </span>
+            <button className="cs-btn" disabled={page >= pages || loadingPage}
+              onClick={() => setPage(p => Math.min(pages, p + 1))}>下一页 →</button>
+          </div>
+        </div>
+
+        {requests.data.length === 0 ? (
+          <div className="cs-empty">该时间段+筛选条件下无请求</div>
+        ) : (
+          <table className="cs-table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>模型</th>
+                <th>状态</th>
+                <th>输入 tok</th>
+                <th>输出 tok</th>
+                <th>延迟</th>
+                <th>成本</th>
+                <th>详情</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.data.map(r => (
+                <tr key={r.request_id}>
+                  <td className="mono" style={{fontSize: 11}}>{r.created_at?.slice(0, 19).replace('T', ' ')}</td>
+                  <td className="mono" style={{fontSize: 12}}>{r.model_id}</td>
+                  <td><StatusPill status={r.status}/></td>
+                  <td className="mono">{fmtCompact(r.tokens.prompt)}</td>
+                  <td className="mono">{fmtCompact(r.tokens.completion)}</td>
+                  <td className="mono">{r.latency_ms ? r.latency_ms + 'ms' : '-'}</td>
                   <td>{fmtUSD(r.cost_usd)}</td>
-                  <td className="mono">{r.avg_latency_ms ? r.avg_latency_ms + 'ms' : '-'}</td>
+                  <td><a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>查看</a></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </section>
-      )}
-
-      <section className="cs-section">
-        <h2>最近 50 条请求</h2>
-        <table className="cs-table">
-          <thead>
-            <tr>
-              <th>时间</th>
-              <th>模型</th>
-              <th>状态</th>
-              <th>Tokens</th>
-              <th>成本</th>
-              <th>详情</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.map(r => (
-              <tr key={r.request_id}>
-                <td className="mono" style={{fontSize: 11}}>{r.created_at?.slice(0, 19)}</td>
-                <td>{r.model_id}</td>
-                <td><StatusPill status={r.status}/></td>
-                <td className="mono">{r.tokens.prompt} / {r.tokens.completion}</td>
-                <td>{fmtUSD(r.cost_usd)}</td>
-                <td><a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>查看</a></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        )}
       </section>
 
       {detail && <RequestDetailModal d={detail} onClose={() => location.hash = '#usage'}/>}
     </>
   );
+}
+
+function groupByLabel(g) {
+  return ({model: '模型', channel: '渠道', day: '日期', key: 'API Key'})[g] || g;
 }
 
 function RequestDetailModal({ d, onClose }) {

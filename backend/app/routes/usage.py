@@ -57,9 +57,74 @@ async def usage_stats(
 
     rows = (await db.execute(stmt)).all()
 
-    # Compute summary
+    # Compute summary across the same window (also bring in/out tokens)
     total_cost = sum((r.cost_mc or 0) for r in rows)
     total_requests = sum((r.requests or 0) for r in rows)
+    total_in = sum((r.in_tok or 0) for r in rows)
+    total_out = sum((r.out_tok or 0) for r in rows)
+
+    # When grouping by channel, also pull (channel_id, model_id) sub-aggregates
+    # so the FE can expand a channel row into its model breakdown without
+    # another round-trip.
+    channel_models: dict[int, list[dict]] = {}
+    if group_by == "channel":
+        sub_stmt = (
+            select(
+                UsageLog.channel_id,
+                UsageLog.model_id,
+                func.count().label("requests"),
+                func.sum(UsageLog.prompt_tokens).label("in_tok"),
+                func.sum(UsageLog.completion_tokens).label("out_tok"),
+                func.sum(UsageLog.cost_micro_cents).label("cost_mc"),
+            )
+            .where(UsageLog.user_id == user.id)
+            .where(UsageLog.created_at >= since_dt)
+            .group_by(UsageLog.channel_id, UsageLog.model_id)
+        )
+        if until_dt:
+            sub_stmt = sub_stmt.where(UsageLog.created_at <= until_dt)
+        for sr in (await db.execute(sub_stmt)).all():
+            cid = sr.channel_id if sr.channel_id is not None else 0
+            channel_models.setdefault(cid, []).append({
+                "model_id": sr.model_id,
+                "requests": int(sr.requests or 0),
+                "input_tokens": int(sr.in_tok or 0),
+                "output_tokens": int(sr.out_tok or 0),
+                "cost_usd": round((sr.cost_mc or 0) / 100_000_000, 6),
+            })
+        # Sort each channel's children by cost desc
+        for cid in channel_models:
+            channel_models[cid].sort(key=lambda m: m["cost_usd"], reverse=True)
+
+    # Resolve channel names for prettier buckets when group_by=channel
+    channel_names: dict[int, str] = {}
+    if group_by == "channel":
+        cids = [int(r.bucket) for r in rows if r.bucket is not None]
+        if cids:
+            for cid, name in (await db.execute(
+                select(Channel.id, Channel.name).where(Channel.id.in_(cids))
+            )).all():
+                channel_names[cid] = name
+
+    out_data = []
+    for r in rows:
+        item = {
+            "bucket": str(r.bucket) if r.bucket is not None else None,
+            "requests": int(r.requests or 0),
+            "input_tokens": int(r.in_tok or 0),
+            "output_tokens": int(r.out_tok or 0),
+            "cost_usd": round((r.cost_mc or 0) / 100_000_000, 4),
+            "cost_micro_cents": int(r.cost_mc or 0),
+            "avg_latency_ms": round(r.avg_latency, 1) if r.avg_latency else None,
+        }
+        if group_by == "channel":
+            cid = int(r.bucket) if r.bucket is not None else 0
+            item["channel_name"] = channel_names.get(cid)
+            item["models"] = channel_models.get(cid, [])
+        out_data.append(item)
+
+    # Default sort: cost descending (most expensive first)
+    out_data.sort(key=lambda x: x.get("cost_micro_cents", 0), reverse=True)
 
     return {
         "group_by": group_by,
@@ -67,20 +132,12 @@ async def usage_stats(
         "until": (until_dt or datetime.now(timezone.utc)).isoformat(),
         "summary": {
             "total_requests": total_requests,
+            "total_input_tokens": total_in,
+            "total_output_tokens": total_out,
             "total_cost_micro_cents": total_cost,
             "total_cost_usd": round(total_cost / 100_000_000, 4),
         },
-        "data": [
-            {
-                "bucket": str(r.bucket) if r.bucket is not None else None,
-                "requests": int(r.requests or 0),
-                "input_tokens": int(r.in_tok or 0),
-                "output_tokens": int(r.out_tok or 0),
-                "cost_usd": round((r.cost_mc or 0) / 100_000_000, 4),
-                "avg_latency_ms": round(r.avg_latency, 1) if r.avg_latency else None,
-            }
-            for r in rows
-        ],
+        "data": out_data,
     }
 
 
@@ -89,9 +146,11 @@ async def usage_requests(
     authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
     since: str | None = Query(default=None),
+    until: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
     model: str | None = None,
+    status: str | None = Query(default=None, pattern="^(ok|error|partial|cancelled)$"),
 ):
     try:
         user = await current_user(authorization, db)
@@ -99,23 +158,81 @@ async def usage_requests(
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
     since_dt = _parse_iso(since) or (datetime.now(timezone.utc) - timedelta(days=7))
+    until_dt = _parse_iso(until)
 
-    stmt = (
-        select(UsageLog)
-        .where(UsageLog.user_id == user.id)
-        .where(UsageLog.created_at >= since_dt)
-        .order_by(UsageLog.id.desc())
+    # Build the WHERE clause shared between count + page query
+    base_filters = [
+        UsageLog.user_id == user.id,
+        UsageLog.created_at >= since_dt,
+    ]
+    if until_dt:
+        base_filters.append(UsageLog.created_at <= until_dt)
+    if model:
+        base_filters.append(UsageLog.model_id == model)
+    if status:
+        base_filters.append(UsageLog.status == status)
+
+    count_stmt = select(func.count(UsageLog.id))
+    for f in base_filters:
+        count_stmt = count_stmt.where(f)
+    total = int((await db.execute(count_stmt)).scalar() or 0)
+
+    page_stmt = select(UsageLog)
+    for f in base_filters:
+        page_stmt = page_stmt.where(f)
+    page_stmt = (
+        page_stmt
+        .order_by(UsageLog.created_at.desc(), UsageLog.id.desc())
         .offset((page - 1) * size)
         .limit(size)
     )
-    if model:
-        stmt = stmt.where(UsageLog.model_id == model)
+    rows = (await db.execute(page_stmt)).scalars().all()
 
-    rows = (await db.execute(stmt)).scalars().all()
     return {
         "page": page,
         "size": size,
+        "total": total,
+        "pages": (total + size - 1) // size if total else 0,
         "data": [_request_summary(r) for r in rows],
+    }
+
+
+@router.get("/models")
+async def usage_models(
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Distinct model_ids the user has used (for filter dropdown).
+
+    Returns the 50 most-recently-used models. Each entry includes the
+    model_id + count + last_used timestamp so the FE can sort meaningfully.
+    """
+    try:
+        user = await current_user(authorization, db)
+    except PrismException as exc:
+        return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
+
+    rows = (await db.execute(
+        select(
+            UsageLog.model_id,
+            func.count().label("requests"),
+            func.max(UsageLog.created_at).label("last_used"),
+        )
+        .where(UsageLog.user_id == user.id)
+        .group_by(UsageLog.model_id)
+        .order_by(func.max(UsageLog.created_at).desc())
+        .limit(50)
+    )).all()
+
+    return {
+        "data": [
+            {
+                "model_id": r.model_id,
+                "requests": int(r.requests or 0),
+                "last_used": r.last_used.isoformat() if r.last_used else None,
+            }
+            for r in rows
+        ],
     }
 
 
