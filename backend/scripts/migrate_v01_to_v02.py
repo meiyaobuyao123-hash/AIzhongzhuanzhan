@@ -29,7 +29,6 @@ from app.db import SessionLocal, engine
 from app.logging_config import configure_logging, logger
 from app.models.orm import Base
 
-
 COLUMN_ADDITIONS = [
     # (table, column, definition)
     ("users", "email_verified", "BOOLEAN NOT NULL DEFAULT 0"),

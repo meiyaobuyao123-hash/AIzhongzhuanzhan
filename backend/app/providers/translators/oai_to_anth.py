@@ -13,7 +13,6 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-
 # ─── Request: OpenAI → Anthropic ─────────────────────────────────────────────
 
 
@@ -247,7 +246,7 @@ async def anth_stream_to_oai(
         }
         if usage is not None:
             chunk["usage"] = usage
-        return f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+        return f"data: {json.dumps(chunk)}\n\n".encode()
 
     async for chunk in upstream_aiter:
         buffer += chunk

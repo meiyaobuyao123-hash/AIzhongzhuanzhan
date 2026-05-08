@@ -51,6 +51,7 @@ model_app = typer.Typer(no_args_is_help=True, help="Manage model catalog")
 payment_app = typer.Typer(no_args_is_help=True, help="Manage top-up payments")
 usage_app = typer.Typer(no_args_is_help=True, help="Usage stats / reporting")
 audit_app = typer.Typer(no_args_is_help=True, help="View admin audit log")
+oauth_app = typer.Typer(no_args_is_help=True, help="Configure OAuth providers")
 app.add_typer(user_app, name="user")
 app.add_typer(key_app, name="key")
 app.add_typer(channel_app, name="channel")
@@ -58,6 +59,7 @@ app.add_typer(model_app, name="model")
 app.add_typer(payment_app, name="payment")
 app.add_typer(usage_app, name="usage")
 app.add_typer(audit_app, name="audit")
+app.add_typer(oauth_app, name="oauth")
 
 
 def _run(coro):
@@ -255,7 +257,7 @@ def key_create(
             await db.refresh(ak)
 
             console.print(f"[green]✓[/] Created Prism Key (id={ak.id}) for user {user_id}")
-            console.print(f"\n[bold yellow]This is the only time the full key is shown:[/]\n")
+            console.print("\n[bold yellow]This is the only time the full key is shown:[/]\n")
             console.print(f"  [bold cyan]{full}[/]\n")
             console.print(f"Prefix: {prefix} … {last4}")
 
@@ -365,6 +367,7 @@ def channel_add(
 def channel_test(id_: Annotated[int, typer.Option("--id", help="Channel ID")]) -> None:
     """Send a minimal request through the channel to verify upstream Key works."""
     import httpx
+
     from app.crypto import decrypt
 
     async def _go():
@@ -382,7 +385,7 @@ def channel_test(id_: Annotated[int, typer.Option("--id", help="Channel ID")]) -
         # Build a minimal probe per provider. Single-token request.
         models = json.loads(ch.models) if ch.models else []
         if not models:
-            console.print(f"[red]✗[/] Channel has no models attached")
+            console.print("[red]✗[/] Channel has no models attached")
             raise typer.Exit(3)
         model_id = models[0]
 
@@ -658,6 +661,122 @@ def payment_mark_paid(id_: Annotated[int, typer.Option("--id")]) -> None:
             )
 
     _run(_go())
+
+
+# =============================================================================
+# oauth subcommands
+# =============================================================================
+
+
+def _update_env_file(env_path: str, updates: dict[str, str]) -> None:
+    """Idempotent .env updater. Replaces existing keys, appends missing ones."""
+    import os
+    if not os.path.exists(env_path):
+        # Touch
+        with open(env_path, "w") as f:
+            pass
+
+    with open(env_path) as f:
+        lines = f.readlines()
+
+    seen = set()
+    new_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            new_lines.append(line)
+            continue
+        key = stripped.split("=", 1)[0]
+        if key in updates:
+            new_lines.append(f"{key}={updates[key]}\n")
+            seen.add(key)
+        else:
+            new_lines.append(line)
+
+    for k, v in updates.items():
+        if k not in seen:
+            new_lines.append(f"{k}={v}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(new_lines)
+
+
+@oauth_app.command("set")
+def oauth_set(
+    provider: Annotated[str, typer.Option(help="github | google")],
+    client_id: Annotated[str, typer.Option("--client-id")],
+    client_secret: Annotated[str, typer.Option("--client-secret")],
+    env_file: Annotated[str, typer.Option(help="Path to .env")] = "/opt/prism/.env",
+    restart: Annotated[bool, typer.Option(help="Restart prism systemd unit after update")] = True,
+) -> None:
+    """Configure OAuth provider credentials in .env and restart the service.
+
+    Example::
+
+        prism-admin oauth set --provider github \\
+          --client-id Iv1.xxxx --client-secret ghs_xxxx
+    """
+    if provider not in ("github", "google"):
+        console.print(f"[red]✗[/] provider must be github or google, got {provider!r}")
+        raise typer.Exit(1)
+
+    p = provider.upper()
+    updates = {
+        f"PRISM_OAUTH_{p}_CLIENT_ID": client_id,
+        f"PRISM_OAUTH_{p}_CLIENT_SECRET": client_secret,
+    }
+    _update_env_file(env_file, updates)
+    console.print(f"[green]✓[/] Updated {env_file}: {provider} OAuth credentials")
+
+    if restart:
+        import os
+        rc = os.system("sudo systemctl restart prism")
+        if rc == 0:
+            console.print("[green]✓[/] Restarted prism service")
+        else:
+            console.print(
+                "[yellow]![/] Could not auto-restart. Run manually:\n"
+                "  sudo systemctl restart prism"
+            )
+
+    console.print(
+        f"\nVerify at https://www.ai100trading.cn/login — "
+        f"the [bold]{provider.capitalize()}[/] button should appear."
+    )
+
+
+@oauth_app.command("status")
+def oauth_status(
+    env_file: Annotated[str, typer.Option(help="Path to .env")] = "/opt/prism/.env",
+) -> None:
+    """Show which OAuth providers are configured."""
+    import os
+    if not os.path.exists(env_file):
+        console.print(f"[red]✗[/] {env_file} not found")
+        raise typer.Exit(1)
+    with open(env_file) as f:
+        env = f.read()
+
+    tbl = Table("Provider", "Configured", "Client ID prefix")
+    for prov in ("github", "google"):
+        p = prov.upper()
+        cid_line = next(
+            (ln for ln in env.splitlines() if ln.strip().startswith(f"PRISM_OAUTH_{p}_CLIENT_ID=")),
+            "",
+        )
+        cid = cid_line.split("=", 1)[1].strip() if "=" in cid_line else ""
+        cs_line = next(
+            (ln for ln in env.splitlines() if ln.strip().startswith(f"PRISM_OAUTH_{p}_CLIENT_SECRET=")),
+            "",
+        )
+        cs = cs_line.split("=", 1)[1].strip() if "=" in cs_line else ""
+        configured = bool(cid) and bool(cs)
+        tbl.add_row(
+            prov,
+            "✓" if configured else "✗",
+            (cid[:12] + "…") if cid else "(not set)",
+        )
+    console.print(tbl)
 
 
 # =============================================================================

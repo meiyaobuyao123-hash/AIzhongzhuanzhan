@@ -7,11 +7,9 @@ is OpenAI/Google.
 from __future__ import annotations
 
 import json
-import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
-
 
 # ─── Request: Anthropic → OpenAI ─────────────────────────────────────────────
 
@@ -219,7 +217,7 @@ async def oai_stream_to_anth(
     buffer = b""
 
     def _event(name: str, payload: dict) -> bytes:
-        return f"event: {name}\ndata: {json.dumps(payload)}\n\n".encode("utf-8")
+        return f"event: {name}\ndata: {json.dumps(payload)}\n\n".encode()
 
     started = False
     async for chunk in upstream_aiter:

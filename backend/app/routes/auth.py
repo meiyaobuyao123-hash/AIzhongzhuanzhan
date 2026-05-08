@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
@@ -22,7 +21,6 @@ from app.audit import record_audit
 from app.deps import client_ip, get_db
 from app.email import send_password_reset_email, send_verification_email
 from app.errors import (
-    InvalidAPIKey,
     PrismException,
     error_response,
 )
@@ -31,7 +29,6 @@ from app.jwt_auth import (
     issue_token,
     revoke_session,
 )
-from app.logging_config import logger
 from app.models.orm import EmailVerification, User
 
 router = APIRouter(tags=["auth"], prefix="/auth")

@@ -12,7 +12,7 @@ this module just defines the per-provider shape.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import Iterable
 from typing import Any, ClassVar
 
 import httpx

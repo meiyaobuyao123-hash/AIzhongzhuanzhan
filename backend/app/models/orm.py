@@ -73,7 +73,7 @@ class User(Base):
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
 
-    api_keys: Mapped[list["ApiKey"]] = relationship(
+    api_keys: Mapped[list[ApiKey]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 

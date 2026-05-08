@@ -26,7 +26,6 @@ from app.billing import (
 from app.deps import client_ip, get_db
 from app.errors import PrismException, error_response
 from app.limits import check_rpm_limit, default_rpm_for_user
-from app.logging_config import logger
 from app.redis_client import get_redis
 from app.routing import (
     AllChannelsFailed,
@@ -218,8 +217,8 @@ async def _wrap_translated_stream(translated_iter, provider, on_complete, upstre
     a separate path. v0.2 simplification: emit translated chunks; bill from
     final usage tracker in translator output (which contains usage in the last
     Anthropic message_delta event)."""
-    import asyncio
     import json
+
     from app.schemas.common import StreamingState, Usage
 
     state = StreamingState()

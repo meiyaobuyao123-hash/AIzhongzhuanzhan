@@ -15,8 +15,7 @@ Flow:
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timezone
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import RedirectResponse

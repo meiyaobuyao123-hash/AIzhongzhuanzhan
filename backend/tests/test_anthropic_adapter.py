@@ -12,7 +12,6 @@ from app.crypto import encrypt
 from app.models.orm import Channel
 from app.providers import make_provider
 from app.providers.anthropic import AnthropicProvider
-from app.schemas.common import Usage
 
 
 def make_channel(master_key: bytes) -> Channel:

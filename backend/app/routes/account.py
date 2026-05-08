@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
@@ -17,7 +16,6 @@ from app.errors import PrismException, error_response
 from app.limits import default_rpm_for_user
 from app.models.orm import (
     ApiKey,
-    BalanceTransaction,
     PaymentIntent,
     User,
 )

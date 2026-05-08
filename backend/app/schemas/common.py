@@ -23,7 +23,7 @@ class Usage:
     cache_write_tokens: int = 0
     reasoning_tokens: int = 0
 
-    def merge(self, other: "Usage") -> "Usage":
+    def merge(self, other: Usage) -> Usage:
         """Combine two usages by addition (used in streaming accumulation).
 
         For Anthropic streaming: input_tokens comes once (in message_start),

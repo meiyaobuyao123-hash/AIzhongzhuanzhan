@@ -15,7 +15,6 @@ from typing import Any
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
-
 # ---- Standard "type" values --------------------------------------------------
 
 ERROR_TYPE_INVALID_REQUEST = "invalid_request_error"

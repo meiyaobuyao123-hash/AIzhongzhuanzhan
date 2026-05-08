@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import authenticate, parse_authorization
 from app.db import SessionLocal
-from app.errors import PrismException
 from app.jwt_auth import InvalidToken, decode_token, is_session_revoked
 from app.models.orm import ApiKey, User
 

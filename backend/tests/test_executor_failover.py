@@ -30,9 +30,10 @@ async def _build_app(db_engine):
 
 async def _seed_user_with_two_channels(Session):
     from argon2 import PasswordHasher
+
+    from app.auth import generate_prism_key
     from app.config import settings
     from app.crypto import encrypt
-    from app.auth import generate_prism_key
     from app.models.orm import ApiKey, Channel, Model, User
 
     ph = PasswordHasher()
@@ -110,8 +111,9 @@ async def test_failover_5xx_to_next_channel(db_engine):
     assert body["id"] == "msg_x"
 
     # Verify usage_log records both channels were tried
-    from app.models.orm import UsageLog
     from sqlalchemy import select
+
+    from app.models.orm import UsageLog
     async with Session() as db:
         log = (await db.execute(select(UsageLog))).scalar_one()
         assert log.status == "ok"
@@ -257,8 +259,9 @@ async def test_attempts_recorded_in_usage_log(db_engine):
             )
 
     assert r.status_code == 200
-    from app.models.orm import UsageLog
     from sqlalchemy import select
+
+    from app.models.orm import UsageLog
     async with Session() as db:
         log = (await db.execute(select(UsageLog))).scalar_one()
         tried = json.loads(log.tried_channels)

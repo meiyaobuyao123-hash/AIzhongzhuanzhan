@@ -111,6 +111,7 @@ async def test_post_messages_non_streaming_full_flow(db_engine):
     # Verify usage_log + balance deduction
     async with Session() as db:
         from sqlalchemy import select
+
         from app.models.orm import BalanceTransaction, UsageLog
 
         log = (await db.execute(select(UsageLog))).scalar_one()

@@ -229,8 +229,9 @@ async def test_account_api_keys_crud(db_engine):
 
 @pytest.mark.asyncio
 async def test_account_balance_endpoint(db_engine):
-    from app.models.orm import User
     from argon2 import PasswordHasher
+
+    from app.models.orm import User
 
     _, Session = db_engine
     ph = PasswordHasher()

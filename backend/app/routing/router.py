@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import random
-from typing import Iterable
+from collections.abc import Iterable
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

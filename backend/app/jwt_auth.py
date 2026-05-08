@@ -23,7 +23,6 @@ from app.config import settings
 from app.errors import PrismException
 from app.models.orm import Session as SessionModel
 
-
 JWT_ALGO = "HS256"
 
 
