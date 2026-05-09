@@ -34,10 +34,17 @@
   --font-display: "Sora", "Geist", "Inter Tight", system-ui, sans-serif;
   --font-body: "Inter", "Source Han Sans CN", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Mobile breakpoints (max-width values for media queries) */
+  --bp-tablet: 1024px;
+  --bp-phone: 640px;
+  --bp-narrow: 480px;
+  --bp-tiny: 360px;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   background: var(--bg-base);
   color: var(--text-primary);
@@ -47,6 +54,19 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+}
+
+/* Prevent iOS auto-zoom on focus when font-size < 16px */
+input, textarea, select { font-size: 16px; }
+@media (min-width: 641px) {
+  input, textarea, select { font-size: inherit; }
+}
+
+/* Tap targets ≥ 44pt (Apple HIG) on mobile */
+@media (max-width: 640px) {
+  button, a.cta-primary, a.cta-ghost, .nav-link, .nav-login, .cs-btn, .cs-nav-link {
+    min-height: 44px;
+  }
 }
 
 /* Background ambience */

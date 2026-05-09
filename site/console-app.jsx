@@ -151,7 +151,7 @@ function ConsoleApp() {
       <main className="cs-main">
         <div className="cs-page-header">
           <h1>{t(TABS.find(tt => tt.id === tab).labelKey)}</h1>
-          <div style={{display: 'flex', alignItems: 'center'}}>
+          <div style={{display: 'flex', alignItems: 'center', flexWrap: 'wrap'}}>
             <ConsoleLangPicker/>
             <div className="cs-balance-pill">
               <span style={{display: 'inline-flex', gap: 12, alignItems: 'center'}}>
@@ -176,7 +176,27 @@ function ConsoleApp() {
         {tab === 'billing'  && <Billing me={me}/>}
         {tab === 'settings' && <Settings me={me} setMe={setMe}/>}
       </main>
+
+      <MobileBottomTabBar tab={tab}/>
     </div>
+  );
+}
+
+/* ─── Mobile bottom tab bar (≤ 640px) ─────────────────────────────── */
+
+function MobileBottomTabBar({ tab }) {
+  return (
+    <nav className="cs-bottom-nav" aria-label="Primary">
+      <div className="cs-bottom-nav-inner">
+        {TABS.map(tt => (
+          <a key={tt.id} href={`#${tt.id}`}
+             className={`cs-bottom-tab ${tab === tt.id ? 'active' : ''}`}>
+            <Icon name={tt.icon} size={20}/>
+            <span>{t(tt.labelKey)}</span>
+          </a>
+        ))}
+      </div>
+    </nav>
   );
 }
 
@@ -227,13 +247,13 @@ function Overview({ me }) {
             <tbody>
               {recent.map(r => (
                 <tr key={r.request_id}>
-                  <td className="mono">{r.created_at?.slice(11, 19)}</td>
-                  <td>{r.model_id}</td>
-                  <td><StatusPill status={r.status}/></td>
-                  <td className="mono">{r.tokens.prompt} / {r.tokens.completion}</td>
-                  <td>{fmtUSD(r.cost_usd)}</td>
-                  <td className="mono">{r.latency_ms}ms</td>
-                  <td>
+                  <td className="mono" data-label={t('console.col.time')}>{r.created_at?.slice(11, 19)}</td>
+                  <td data-label={t('console.col.model')}>{r.model_id}</td>
+                  <td data-label={t('console.col.status')}><StatusPill status={r.status}/></td>
+                  <td className="mono" data-label={t('console.col.tokens')}>{r.tokens.prompt} / {r.tokens.completion}</td>
+                  <td data-label={t('console.col.cost')}>{fmtUSD(r.cost_usd)}</td>
+                  <td className="mono" data-label={t('console.col.latency')}>{r.latency_ms}ms</td>
+                  <td data-label={t('console.col.detail')}>
                     <a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>{t('console.view')}</a>
                   </td>
                 </tr>
@@ -360,18 +380,18 @@ function Keys() {
           <tbody>
             {keys.map(k => (
               <tr key={k.id}>
-                <td>{k.name || '-'}</td>
-                <td className="mono">{k.prefix}…{k.last4}</td>
-                <td className="mono">{k.rate_limit_rpm || t('console.keys.rpm_default')}</td>
-                <td>
+                <td data-label={t('console.col.name')}>{k.name || '-'}</td>
+                <td className="mono" data-label={t('console.keys.col.prefix')}>{k.prefix}…{k.last4}</td>
+                <td className="mono" data-label={t('console.keys.col.rpm')}>{k.rate_limit_rpm || t('console.keys.rpm_default')}</td>
+                <td data-label={t('console.col.status')}>
                   {k.enabled
                     ? <span className="cs-pill cs-pill-ok">enabled</span>
                     : <span className="cs-pill cs-pill-err">revoked</span>}
                 </td>
-                <td className="mono" style={{fontSize: 11, color: 'var(--text-muted)'}}>
+                <td className="mono" data-label={t('console.keys.col.last_used')} style={{fontSize: 11, color: 'var(--text-muted)'}}>
                   {k.last_used_at?.slice(0, 19) || t('console.keys.never_used')}
                 </td>
-                <td>
+                <td data-label={t('console.col.actions')}>
                   {k.enabled && (
                     <button className="cs-btn cs-btn-danger" onClick={() => revoke(k.id)}>{t('keys.revoke')}</button>
                   )}
@@ -659,7 +679,7 @@ function Usage() {
                       onClick={expandable ? () => setExpanded(isOpen ? null : childKey) : undefined}
                       style={expandable ? {cursor: 'pointer'} : undefined}
                     >
-                      <td>
+                      <td data-label={groupByLabel(groupBy)}>
                         {expandable && (
                           <span style={{display: 'inline-block', width: 14, color: 'var(--text-muted)'}}>
                             {isOpen ? '▾' : '▸'}
@@ -669,23 +689,23 @@ function Usage() {
                           ? <ModelCell modelId={display}/>
                           : <span className="mono">{display}</span>}
                       </td>
-                      <td>{fmtCompact(r.requests)}</td>
-                      <td className="mono">{fmtCompact(r.input_tokens)}</td>
-                      <td className="mono">{fmtCompact(r.output_tokens)}</td>
-                      <td>{fmtUSD(r.cost_usd)}</td>
-                      <td className="mono">{r.avg_latency_ms ? r.avg_latency_ms + 'ms' : '-'}</td>
+                      <td data-label={t('usage.agg.col.requests')}>{fmtCompact(r.requests)}</td>
+                      <td className="mono" data-label={t('usage.agg.col.input')}>{fmtCompact(r.input_tokens)}</td>
+                      <td className="mono" data-label={t('usage.agg.col.output')}>{fmtCompact(r.output_tokens)}</td>
+                      <td data-label={t('usage.agg.col.cost')}>{fmtUSD(r.cost_usd)}</td>
+                      <td className="mono" data-label={t('usage.agg.col.avg_lat')}>{r.avg_latency_ms ? r.avg_latency_ms + 'ms' : '-'}</td>
                     </tr>
                     {isOpen && (r.models || []).map(m => (
                       <tr key={`${i}:${m.model_id}`} className="cs-row-child">
-                        <td style={{paddingLeft: 36}}>
+                        <td data-label={groupByLabel(groupBy)} style={{paddingLeft: 36}}>
                           <span style={{color: 'var(--text-muted)', marginRight: 6}}>↳</span>
                           <ModelCell modelId={m.model_id}/>
                         </td>
-                        <td>{fmtCompact(m.requests)}</td>
-                        <td className="mono">{fmtCompact(m.input_tokens)}</td>
-                        <td className="mono">{fmtCompact(m.output_tokens)}</td>
-                        <td>{fmtUSD(m.cost_usd)}</td>
-                        <td>—</td>
+                        <td data-label={t('usage.agg.col.requests')}>{fmtCompact(m.requests)}</td>
+                        <td className="mono" data-label={t('usage.agg.col.input')}>{fmtCompact(m.input_tokens)}</td>
+                        <td className="mono" data-label={t('usage.agg.col.output')}>{fmtCompact(m.output_tokens)}</td>
+                        <td data-label={t('usage.agg.col.cost')}>{fmtUSD(m.cost_usd)}</td>
+                        <td data-label={t('usage.agg.col.avg_lat')}>—</td>
                       </tr>
                     ))}
                   </React.Fragment>
@@ -741,14 +761,14 @@ function Usage() {
             <tbody>
               {requests.data.map(r => (
                 <tr key={r.request_id}>
-                  <td className="mono" style={{fontSize: 11}}>{r.created_at?.slice(0, 19).replace('T', ' ')}</td>
-                  <td><ModelCell modelId={r.model_id}/></td>
-                  <td><StatusPill status={r.status}/></td>
-                  <td className="mono">{fmtCompact(r.tokens.prompt)}</td>
-                  <td className="mono">{fmtCompact(r.tokens.completion)}</td>
-                  <td className="mono">{r.latency_ms ? r.latency_ms + 'ms' : '-'}</td>
-                  <td>{fmtUSD(r.cost_usd)}</td>
-                  <td><a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>{t('console.view')}</a></td>
+                  <td className="mono" data-label={t('console.col.time')} style={{fontSize: 11}}>{r.created_at?.slice(0, 19).replace('T', ' ')}</td>
+                  <td data-label={t('console.col.model')}><ModelCell modelId={r.model_id}/></td>
+                  <td data-label={t('console.col.status')}><StatusPill status={r.status}/></td>
+                  <td className="mono" data-label={t('usage.detail.col.input')}>{fmtCompact(r.tokens.prompt)}</td>
+                  <td className="mono" data-label={t('usage.detail.col.output')}>{fmtCompact(r.tokens.completion)}</td>
+                  <td className="mono" data-label={t('console.col.latency')}>{r.latency_ms ? r.latency_ms + 'ms' : '-'}</td>
+                  <td data-label={t('console.col.cost')}>{fmtUSD(r.cost_usd)}</td>
+                  <td data-label={t('console.col.detail')}><a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>{t('console.view')}</a></td>
                 </tr>
               ))}
             </tbody>
@@ -818,10 +838,10 @@ function RequestDetailModal({ d, onClose }) {
               <tbody>
                 {d.routing.tried_channels.map((tc, i) => (
                   <tr key={i}>
-                    <td>{i + 1}</td>
-                    <td className="mono">{tc.channel_id}</td>
-                    <td className="mono">{tc.status || '-'}</td>
-                    <td className="mono" style={{fontSize: 11}}>{tc.error?.slice(0, 80) || 'ok'}</td>
+                    <td data-label={t('usage.modal.col.order')}>{i + 1}</td>
+                    <td className="mono" data-label="Channel ID">{tc.channel_id}</td>
+                    <td className="mono" data-label={t('usage.modal.col.http')}>{tc.status || '-'}</td>
+                    <td className="mono" data-label={t('usage.modal.col.result')} style={{fontSize: 11}}>{tc.error?.slice(0, 80) || 'ok'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -830,7 +850,7 @@ function RequestDetailModal({ d, onClose }) {
         )}
 
         <h4 style={{margin: '20px 0 10px', fontFamily: 'var(--font-display)'}}>{t('usage.modal.tok_section')}</h4>
-        <table className="cs-table">
+        <table className="cs-table cs-table-kv">
           <tbody>
             <tr><td>Input (prompt)</td><td className="mono">{d.tokens.prompt.toLocaleString()}</td></tr>
             <tr><td>Output (completion)</td><td className="mono">{d.tokens.completion.toLocaleString()}</td></tr>
@@ -954,16 +974,16 @@ function Billing({ me }) {
               </tr>
             </thead>
             <tbody>
-              {topups.map(t => (
-                <tr key={t.id}>
-                  <td className="mono" style={{fontSize: 11}}>{t.created_at?.slice(0, 19)}</td>
-                  <td className="mono">{t.channel}</td>
-                  <td>{fmtUSD(t.amount_usd)}</td>
-                  <td className="mono">{fmtUSD(t.fee_usd)}</td>
-                  <td>{fmtUSD(t.credited_usd)}</td>
-                  <td><StatusPill status={t.status === 'paid' ? 'ok' : t.status}/></td>
-                  <td className="mono" style={{fontSize: 11}}>{t.memo || '-'}</td>
-                  <td className="mono" style={{fontSize: 11}}>{t.external_ref?.slice(0, 14) || '-'}</td>
+              {topups.map(tu => (
+                <tr key={tu.id}>
+                  <td className="mono" data-label={t('console.col.time')} style={{fontSize: 11}}>{tu.created_at?.slice(0, 19)}</td>
+                  <td className="mono" data-label={t('billing.history.col.channel')}>{tu.channel}</td>
+                  <td data-label={t('billing.history.col.amount')}>{fmtUSD(tu.amount_usd)}</td>
+                  <td className="mono" data-label={t('billing.history.col.fee')}>{fmtUSD(tu.fee_usd)}</td>
+                  <td data-label={t('billing.history.col.credited')}>{fmtUSD(tu.credited_usd)}</td>
+                  <td data-label={t('console.col.status')}><StatusPill status={tu.status === 'paid' ? 'ok' : tu.status}/></td>
+                  <td className="mono" data-label="memo" style={{fontSize: 11}}>{tu.memo || '-'}</td>
+                  <td className="mono" data-label={t('billing.history.col.tx')} style={{fontSize: 11}}>{tu.external_ref?.slice(0, 14) || '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -1130,6 +1150,7 @@ function DomesticPayCard({ titleKey, en, qrUrl, tone }) {
           </div>
         ) : (
           <img src={qrUrl} alt={title} className="cs-qr-img"
+            loading="lazy" decoding="async"
             onError={() => setImgError(true)}/>
         )}
       </div>

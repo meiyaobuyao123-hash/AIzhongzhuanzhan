@@ -7,7 +7,7 @@
   <script src="/suanli/i18n.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --bg: #FAFAFA;
@@ -132,8 +132,48 @@
     .lead { font-size: 17px; color: var(--text-2); margin-bottom: 28px; }
 
     @media (max-width: 768px) {
-      .layout { grid-template-columns: 1fr; padding: 20px 16px 60px; }
-      .toc { position: static; margin-bottom: 24px; }
+      .layout { grid-template-columns: 1fr; padding: 20px 16px 60px; gap: 16px; }
+      /* TOC 折叠成 <details>-style sticky 横条 */
+      .toc {
+        position: sticky;
+        top: 56px;
+        z-index: 10;
+        background: var(--surface);
+        margin: 0 -16px 16px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        max-height: 44px;
+        overflow: hidden;
+        transition: max-height 240ms ease;
+      }
+      .toc.expanded { max-height: 500px; overflow-y: auto; }
+      .toc::before {
+        content: attr(data-label) " ▾";
+        display: block;
+        cursor: pointer;
+        color: var(--text-2);
+        font-weight: 500;
+        font-size: 13px;
+      }
+      .toc.expanded::before { content: attr(data-label) " ▴"; }
+      .toc-title { display: none; }
+      .toc a { padding: 8px 0; font-size: 13px; }
+      h1 { font-size: 26px; }
+      h2 { font-size: 20px; margin-top: 32px; }
+      pre { font-size: 11.5px; padding: 12px; }
+      table { font-size: 12px; }
+      table th, table td { padding: 8px 10px; }
+      .topbar-nav { gap: 12px; font-size: 12px; }
+      .topbar-nav a:not(.topbar-cta) { display: none; }
+      .topbar-nav a.active, .topbar-nav .lang-picker-light, .topbar-nav .topbar-cta { display: inline-block; }
+    }
+    @media (max-width: 480px) {
+      .topbar { padding: 10px 14px; }
+      .topbar-name { font-size: 14px; }
+      .lead { font-size: 15px; }
+      h1 { font-size: 22px; }
+      .layout { padding: 14px 12px 60px; }
     }
     .lang-picker-light {
       background: #FFFFFF;
@@ -188,11 +228,32 @@
         sel.appendChild(o);
       });
       sel.addEventListener('change', e => window.setLang(e.target.value));
+
+      // Mobile TOC: click toggles expansion
+      document.addEventListener('DOMContentLoaded', () => {
+        const toc = document.querySelector('.toc');
+        if (!toc) return;
+        // localized label
+        const tocLabel = window.t('quickstart.toc.title');
+        toc.setAttribute('data-label', tocLabel);
+        toc.addEventListener('click', (e) => {
+          // Only toggle on the header strip click (≤768px sticky); links keep working
+          if (window.innerWidth > 768) return;
+          if (e.target.tagName === 'A') return;
+          toc.classList.toggle('expanded');
+        });
+        // Auto-collapse after picking a section
+        toc.querySelectorAll('a').forEach(a => {
+          a.addEventListener('click', () => {
+            if (window.innerWidth <= 768) toc.classList.remove('expanded');
+          });
+        });
+      });
     })();
   </script>
 
   <div class="layout">
-    <aside class="toc">
+    <aside class="toc" data-label="On this page">
       <div class="toc-title" data-i18n="quickstart.toc.title">On this page</div>
       <a href="#overview" data-i18n="quickstart.toc.overview">Overview</a>
       <a href="#auth" data-i18n="quickstart.toc.auth">1. Auth</a>

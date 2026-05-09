@@ -8,7 +8,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="tokens.css"/>
   <link rel="stylesheet" href="styles.css"/>
 </head>
@@ -18,14 +18,13 @@
   <!-- i18n must load before everything else so window.t is available -->
   <script src="i18n.js"></script>
 
-  <!-- React 18 + Babel standalone (matches the Models prototype stack) -->
-  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <!-- React 18 production min (precompiled JSX, no Babel runtime) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
 
   <script src="data.js"></script>
-  <script type="text/babel" src="hero.jsx"></script>
-  <script type="text/babel" src="sections.jsx"></script>
-  <script type="text/babel" src="app.jsx"></script>
+  <script src="hero.js" defer></script>
+  <script src="sections.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

@@ -790,6 +790,8 @@ function ContactSalesModal({ onClose }) {
         </p>
         <img src="/suanli/qr-wechat-contact.jpg"
              alt={_ts('contact.alt')}
+             loading="lazy"
+             decoding="async"
              style={{width: '100%', maxWidth: 260, borderRadius: 10, display: 'block', margin: '0 auto'}}/>
         <p style={{margin: '14px 0 0', fontSize: 12, color: '#A1A1AA'}}>
           {_ts('contact.signature')}
