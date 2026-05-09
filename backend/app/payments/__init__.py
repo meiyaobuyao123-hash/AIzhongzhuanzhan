@@ -1,8 +1,13 @@
-"""USDT chain monitors (v0.3).
+"""USDC chain monitors (v0.3, USDT→USDC token swap done in v0.4).
 
 Each chain has a `ChainMonitor` subclass that polls its public RPC / API,
-fetches new incoming USDT transfers to our receive address, and matches them
+fetches new incoming USDC transfers to our receive address, and matches them
 against pending `payment_intents` to credit user balances.
+
+Note: internal `payment_intent.channel` keys still use `usdt-*` prefixes
+(`usdt-trc20`, `usdt-sol`, `usdt-evm`) for DB CHECK-constraint compatibility,
+even though we now accept USDC tokens — the contract addresses in
+`config.py` point at USDC, not USDT.
 
 Public surface:
   - `ChainMonitor` (abstract base)

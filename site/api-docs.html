@@ -77,29 +77,44 @@
     })();
   </script>
 
-  <!-- Scalar API Reference renders the OpenAPI spec served by FastAPI. -->
-  <script
-    id="api-reference"
-    data-url="/suanli-api/api/openapi.json"
-    data-configuration='{
-      "theme": "default",
-      "layout": "modern",
-      "hideClientButton": false,
-      "hideDownloadButton": false,
-      "hideTestRequestButton": false,
-      "defaultHttpClient": { "targetKey": "shell", "clientKey": "curl" },
-      "metaData": {
-        "title": "Prism Gateway API",
-        "description": "Transparent AI gateway. cost = price."
-      },
-      "servers": [
-        {
-          "url": "https://www.ai100trading.cn/suanli-api",
-          "description": "Production"
-        }
-      ]
-    }'
-  ></script>
-  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <!--
+    Scalar API Reference renders the OpenAPI spec served by FastAPI.
+    The URL gets ?lang=xx appended based on the user's selected site language
+    (window.LANG, set by /suanli/i18n.js). The backend's
+    /api/openapi.json route looks at the lang param and returns a localized spec.
+  -->
+  <div id="scalar-mount"></div>
+  <script>
+    (function () {
+      const lang = window.LANG || 'en';
+      // Map our site lang to Scalar's locale codes for UI chrome.
+      // Scalar supports: en, zh-Hans, ja, ko, fr (chrome-only labels like "Try It").
+      const scalarLocale = ({zh: 'zh-Hans'}[lang]) || lang;
+      const cfg = {
+        url: '/suanli-api/api/openapi.json?lang=' + encodeURIComponent(lang),
+        theme: 'default',
+        layout: 'modern',
+        hideClientButton: false,
+        hideDownloadButton: false,
+        hideTestRequestButton: false,
+        locale: scalarLocale,
+        defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' },
+        metaData: {
+          title: 'Prism Gateway API',
+          description: 'Transparent AI gateway. cost = price.',
+        },
+        servers: [
+          { url: 'https://www.ai100trading.cn/suanli-api', description: 'Production' },
+        ],
+      };
+      const s = document.createElement('script');
+      s.id = 'api-reference';
+      s.setAttribute('data-configuration', JSON.stringify(cfg));
+      document.getElementById('scalar-mount').appendChild(s);
+      const sl = document.createElement('script');
+      sl.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
+      document.body.appendChild(sl);
+    })();
+  </script>
 </body>
 </html>

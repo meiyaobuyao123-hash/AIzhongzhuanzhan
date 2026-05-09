@@ -107,7 +107,7 @@ class Settings(BaseSettings):
     arbitrum_usdc_contract: str = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
     ethereum_usdc_contract: str = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 
-    # Default EVM sub-chain (the one we tell users to send USDT on first)
+    # Default EVM sub-chain (the one we tell users to send USDC on first)
     evm_default_chain: str = "bsc"
 
     # Public RPC / Etherscan-style API endpoints

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prism-gateway"
-version = "0.1.0"
-description = "Prism — transparent AI gateway. Cost = price. 0% markup, 0.05% top-up fee."
+version = "0.5.0"
+description = "Prism — transparent AI gateway. Cost = price. 0% markup, 1.5% top-up fee."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary" }

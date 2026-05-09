@@ -36,13 +36,13 @@ from app.models.orm import (
 
 @dataclass(frozen=True)
 class IncomingTx:
-    """One on-chain USDT transfer we want to evaluate for matching."""
+    """One on-chain USDC transfer we want to evaluate for matching."""
 
     network: str  # 'tron' / 'solana' / 'bsc' / 'polygon' / 'arbitrum' / 'ethereum'
     tx_hash: str
     from_address: str
     to_address: str
-    amount_micro_cents: int  # USDT amount converted to our µ¢ (1 USDT = 100_000_000 µ¢)
+    amount_micro_cents: int  # USDC amount converted to our µ¢ (1 USDC = 100_000_000 µ¢)
     block_height: int | None = None
     block_time: datetime | None = None
     memo: str | None = None  # only TRC20/SOL might carry one; EVM does not
@@ -60,7 +60,7 @@ class ChainMonitor(ABC):
     async def fetch_new_incoming(
         self, state: ChainMonitorState
     ) -> list[IncomingTx]:
-        """Return new incoming USDT transfers since `state` cursor.
+        """Return new incoming USDC transfers since `state` cursor.
 
         Implementations should advance the state cursor _in this method_ when
         appropriate (e.g. set `state.last_block_height` to the highest block

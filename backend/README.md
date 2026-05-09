@@ -1,8 +1,9 @@
-# Prism Gateway · Backend (v0.1)
+# Prism Gateway · Backend (v0.5)
 
-透明定价的 AI 模型聚合网关。**采购成本 = 客户成本**，0% 加价，0.05% 充值手续费。
+透明定价的 AI 模型聚合网关。**采购成本 = 客户成本**，0% 加价，1.5% 充值手续费。
 
-完整方案见 [`docs/v0.1-implementation-plan.md`](../docs/v0.1-implementation-plan.md)。
+完整方案见 [`docs/v0.1-implementation-plan.md`](../docs/v0.1-implementation-plan.md)
+以及后续版本的 spec 文档。
 
 ---
 
