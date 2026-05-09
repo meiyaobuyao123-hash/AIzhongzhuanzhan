@@ -115,6 +115,10 @@ async def record_request_outcome(
     """
     model_currency = (model.price_currency or "USD").upper()
 
+    # v0.5: stamp the active price_version_id so refunds are computable
+    from app.pricing.checker import get_active_price_version_id
+    price_version_id = await get_active_price_version_id(db, model_id=model.model_id)
+
     log = UsageLog(
         request_id=request_id,
         user_id=user.id,
@@ -134,6 +138,7 @@ async def record_request_outcome(
         ttft_ms=stats.ttft_ms if stats else None,
         is_streaming=is_streaming,
         client_ip=client_ip,
+        price_version_id=price_version_id,
     )
     db.add(log)
     await db.flush()

@@ -54,6 +54,7 @@ audit_app = typer.Typer(no_args_is_help=True, help="View admin audit log")
 oauth_app = typer.Typer(no_args_is_help=True, help="Configure OAuth providers")
 capacity_app = typer.Typer(no_args_is_help=True, help="Capacity monitor (RPM/TPM/5xx)")
 email_app = typer.Typer(no_args_is_help=True, help="Email provider diagnostics")
+price_app = typer.Typer(no_args_is_help=True, help="Price tracking (v0.5)")
 app.add_typer(user_app, name="user")
 app.add_typer(key_app, name="key")
 app.add_typer(channel_app, name="channel")
@@ -64,6 +65,7 @@ app.add_typer(audit_app, name="audit")
 app.add_typer(oauth_app, name="oauth")
 app.add_typer(capacity_app, name="capacity")
 app.add_typer(email_app, name="email")
+app.add_typer(price_app, name="price")
 
 
 def _run(coro):
@@ -998,6 +1000,185 @@ def email_test(
 # =============================================================================
 # entrypoint
 # =============================================================================
+
+
+# =============================================================================
+# price subcommands (v0.5)
+# =============================================================================
+
+
+@price_app.command("list")
+def price_list() -> None:
+    """Show current DB price + last-confirmed time + source URL for all enabled models."""
+    from app.models.orm import Model
+
+    async def _go():
+        async with SessionLocal() as db:
+            rows = (await db.execute(
+                select(Model).where(Model.enabled.is_(True)).order_by(Model.id)
+            )).scalars().all()
+            tbl = Table(
+                "id", "model_id", "in/M", "out/M", "cur",
+                "set_at", "set_by", "source",
+            )
+            for r in rows:
+                sym = "$" if (r.price_currency or "USD") == "USD" else "¥"
+                set_at = (
+                    r.price_set_at.strftime("%Y-%m-%d %H:%M") if r.price_set_at
+                    else "(none)"
+                )
+                tbl.add_row(
+                    str(r.id), r.model_id,
+                    f"{sym}{r.price_input_per_million / 100_000_000:.4f}",
+                    f"{sym}{r.price_output_per_million / 100_000_000:.4f}",
+                    r.price_currency or "USD",
+                    set_at,
+                    r.price_set_by or "-",
+                    (r.price_source_url or "-")[:40],
+                )
+            console.print(tbl)
+
+    _run(_go())
+
+
+@price_app.command("check")
+def price_check(
+    threshold: Annotated[float, typer.Option(help="Diff %% to flag as anomaly")] = 1.0,
+) -> None:
+    """Run one full check cycle now: pull all sources, diff, write anomalies."""
+    from app.pricing.checker import run_check_cycle
+
+    async def _go():
+        async with SessionLocal() as db:
+            result = await run_check_cycle(db, threshold_pct=threshold)
+            console.print("[bold]Check cycle done[/]")
+            console.print(f"  Sources run:           {result.sources_run}")
+            console.print(f"  Sources failed:        {len(result.sources_failed)}")
+            for src, err in result.sources_failed:
+                console.print(f"    [yellow]✗[/] {src}: {err[:100]}")
+            console.print(f"  Snapshots collected:   {result.snapshots_collected}")
+            console.print(f"  Snapshots unchanged:   {result.snapshots_unchanged}")
+            console.print(f"  [bold red]Anomalies created: {result.anomalies_created}[/]")
+            console.print(f"  Unknown observed:      {result.unknown_models}")
+
+    _run(_go())
+
+
+@price_app.command("anomalies")
+def price_anomalies(
+    status: Annotated[str, typer.Option(help="Filter status")] = "pending",
+) -> None:
+    """List anomalies awaiting review."""
+    from app.models.orm import PriceAnomaly
+
+    async def _go():
+        async with SessionLocal() as db:
+            stmt = select(PriceAnomaly).order_by(PriceAnomaly.detected_at.desc())
+            if status != "all":
+                stmt = stmt.where(PriceAnomaly.status == status)
+            rows = (await db.execute(stmt)).scalars().all()
+
+            if not rows:
+                console.print(f"[green]No {status} anomalies.[/]")
+                return
+
+            tbl = Table("id", "model_id", "source", "DB in→obs in", "DB out→obs out",
+                        "diff%", "detected", "status")
+            for r in rows:
+                sym_d = "$" if r.current_db_input < 1_000_000_000 else "¥"
+                tbl.add_row(
+                    str(r.id), r.model_id, r.source,
+                    f"{sym_d}{r.current_db_input/100_000_000:.3f}→{sym_d}{r.observed_input/100_000_000:.3f}",
+                    f"{sym_d}{r.current_db_output/100_000_000:.3f}→{sym_d}{r.observed_output/100_000_000:.3f}",
+                    f"{max(r.diff_pct_input, r.diff_pct_output):.1f}%",
+                    r.detected_at.strftime("%m-%d %H:%M"),
+                    r.status,
+                )
+            console.print(tbl)
+
+    _run(_go())
+
+
+@price_app.command("confirm")
+def price_confirm(
+    anomaly_id: Annotated[int, typer.Option("--id", help="anomaly id from `price anomalies`")],
+    by: Annotated[str, typer.Option(help="Who is confirming (your email)")] = "admin-cli",
+) -> None:
+    """Apply observed value of this anomaly to the live model price + write history."""
+    from app.pricing.checker import confirm_anomaly
+
+    async def _go():
+        async with SessionLocal() as db:
+            try:
+                history = await confirm_anomaly(db, anomaly_id=anomaly_id, confirmed_by=by)
+            except ValueError as exc:
+                console.print(f"[red]✗[/] {exc}")
+                raise typer.Exit(1)
+            console.print(
+                f"[green]✓[/] Confirmed anomaly {anomaly_id}. "
+                f"New history row id={history.id} for {history.model_id} "
+                f"(in={history.price_input_per_million/1e8:.4f} "
+                f"out={history.price_output_per_million/1e8:.4f})"
+            )
+
+    _run(_go())
+
+
+@price_app.command("reject")
+def price_reject(
+    anomaly_id: Annotated[int, typer.Option("--id")],
+    by: Annotated[str, typer.Option(help="Who is rejecting")] = "admin-cli",
+    reason: Annotated[str | None, typer.Option(help="Why rejected")] = None,
+) -> None:
+    """Reject an anomaly: keep DB price, mark resolved."""
+    from app.pricing.checker import reject_anomaly
+
+    async def _go():
+        async with SessionLocal() as db:
+            try:
+                await reject_anomaly(db, anomaly_id=anomaly_id, rejected_by=by, reason=reason)
+            except ValueError as exc:
+                console.print(f"[red]✗[/] {exc}")
+                raise typer.Exit(1)
+            console.print(f"[green]✓[/] Rejected anomaly {anomaly_id}")
+
+    _run(_go())
+
+
+@price_app.command("history")
+def price_history(
+    model_id: Annotated[str, typer.Option("--model-id")],
+    limit: Annotated[int, typer.Option(help="Max rows")] = 20,
+) -> None:
+    """Show recent price changes for a model."""
+    from app.models.orm import ModelPriceHistory
+
+    async def _go():
+        async with SessionLocal() as db:
+            rows = (await db.execute(
+                select(ModelPriceHistory)
+                .where(ModelPriceHistory.model_id == model_id)
+                .order_by(ModelPriceHistory.effective_at.desc())
+                .limit(limit)
+            )).scalars().all()
+            if not rows:
+                console.print(f"[yellow]No history for {model_id}[/]")
+                return
+            tbl = Table("id", "effective_at", "in/M", "out/M", "cur", "source", "by")
+            for r in rows:
+                sym = "$" if r.currency == "USD" else "¥"
+                tbl.add_row(
+                    str(r.id),
+                    r.effective_at.strftime("%Y-%m-%d %H:%M"),
+                    f"{sym}{r.price_input_per_million/1e8:.4f}",
+                    f"{sym}{r.price_output_per_million/1e8:.4f}",
+                    r.currency,
+                    r.source,
+                    r.confirmed_by or "-",
+                )
+            console.print(tbl)
+
+    _run(_go())
 
 
 def main() -> None:

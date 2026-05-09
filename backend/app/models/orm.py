@@ -162,6 +162,13 @@ class Model(Base):
         String(3), nullable=False, default="USD"
     )
 
+    # v0.5 price tracking metadata
+    price_set_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    price_set_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    price_source_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
     capabilities: Mapped[str | None] = mapped_column(Text, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -281,6 +288,13 @@ class UsageLog(Base):
     # v0.2: track router retries for the request-detail panel
     attempt_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     tried_channels: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # v0.5 price tracking: the active model_price_history row at bill time.
+    # Lets us compute exact per-request refunds when we discover we
+    # over-charged (vendor lowered price between our checks).
+    price_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("model_price_history.id"), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow, index=True
@@ -530,3 +544,95 @@ class Session(Base):
     )
 
     __table_args__ = (Index("idx_sessions_user_revoked", "user_id", "revoked_at"),)
+
+
+# =============================================================================
+# v0.5: model_price_history (every confirmed price write — audit + refund source)
+# =============================================================================
+
+
+class ModelPriceHistory(Base):
+    """One row per price change. Never delete.
+
+    `effective_at` is when this price became active (typically = created_at,
+    but can be back-dated for audit). When billing a request, we look up the
+    most-recent row with effective_at <= request_time to determine the price
+    that applied — so refunds are exact even after multiple price changes.
+    """
+
+    __tablename__ = "model_price_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    effective_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    price_input_per_million: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    price_output_per_million: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    price_cache_read_per_million: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    price_cache_write_per_million: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+
+    source: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    confirmed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, index=True
+    )
+
+    __table_args__ = (
+        Index("idx_mph_model_time", "model_id", "effective_at"),
+    )
+
+
+# =============================================================================
+# v0.5: price_anomalies (pending diffs awaiting human confirmation)
+# =============================================================================
+
+
+class PriceAnomaly(Base):
+    """A diff detected between live source price vs DB price. Until ops
+    confirms (or rejects) we keep status='pending' and don't update the live
+    price. Same model can accumulate multiple anomaly rows over time."""
+
+    __tablename__ = "price_anomalies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, index=True
+    )
+
+    source: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    current_db_input: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    current_db_output: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    observed_input: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    observed_output: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    diff_pct_input: Mapped[float] = mapped_column(nullable=False)
+    diff_pct_output: Mapped[float] = mapped_column(nullable=False)
+
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="pending"
+    )
+
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    resolved_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending','confirmed','rejected','expired')",
+            name="ck_price_anomaly_status",
+        ),
+        Index("idx_pa_status", "status", "detected_at"),
+    )

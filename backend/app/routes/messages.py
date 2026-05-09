@@ -293,6 +293,9 @@ async def record_request_outcome_v02(
     """Wrap v0.1 record_request_outcome to also save attempt_index + tried_channels."""
     # Direct insert with v0.2 fields
     from app.models.orm import BalanceTransaction, UsageLog
+    from app.pricing.checker import get_active_price_version_id
+    price_version_id = await get_active_price_version_id(db, model_id=model.model_id)
+
     log = UsageLog(
         request_id=request_id,
         user_id=user.id,
@@ -314,6 +317,7 @@ async def record_request_outcome_v02(
         tried_channels=tried_channels,
         is_streaming=is_streaming,
         client_ip=client_ip,
+        price_version_id=price_version_id,
     )
     db.add(log)
     await db.flush()
