@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Quickstart · Prism</title>
+  <title data-i18n="quickstart.title">Quickstart · Prism</title>
+  <script src="/suanli/i18n.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -134,6 +135,32 @@
       .layout { grid-template-columns: 1fr; padding: 20px 16px 60px; }
       .toc { position: static; margin-bottom: 24px; }
     }
+    .lang-picker-light {
+      background: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.10);
+      color: #3F3F46;
+      padding: 5px 26px 5px 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M2 4l3 3 3-3' stroke='%2371717a' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+    .lang-picker-light:hover { border-color: rgba(0, 0, 0, 0.2); }
+    .lang-note {
+      background: #FFF7E6;
+      border-left: 3px solid #DE9A00;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      font-size: 13px;
+      margin: 0 0 24px;
+      color: #57534E;
+    }
+    .lang-note:empty { display: none; }
   </style>
 </head>
 <body>
@@ -143,33 +170,46 @@
       <span class="topbar-name">Prism</span>
     </a>
     <nav class="topbar-nav">
-      <a href="/quickstart" class="active">Quickstart</a>
-      <a href="/api-docs">API Reference</a>
-      <a href="/suanli/#pricing">Pricing</a>
-      <a href="/console">Console</a>
-      <a href="/login" class="topbar-cta">登录</a>
+      <a href="/quickstart" class="active" data-i18n="console.quickstart">Quickstart</a>
+      <a href="/api-docs" data-i18n="console.api_docs">API Reference</a>
+      <a href="/suanli/#pricing" data-i18n="nav.pricing">Pricing</a>
+      <a href="/console" data-i18n="nav.console">Console</a>
+      <select class="lang-picker-light" id="quickstart-lang" title="Language"></select>
+      <a href="/login" class="topbar-cta" data-i18n="nav.login">Log in</a>
     </nav>
   </div>
+  <script>
+    (function () {
+      const sel = document.getElementById('quickstart-lang');
+      (window.PRISM_I18N_SUPPORTED || []).forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = window.t('lang.' + c);
+        if (c === window.LANG) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', e => window.setLang(e.target.value));
+    })();
+  </script>
 
   <div class="layout">
     <aside class="toc">
-      <div class="toc-title">本页内容</div>
-      <a href="#overview">概览</a>
-      <a href="#auth">1. 鉴权</a>
-      <a href="#openai">2. OpenAI SDK 调用</a>
-      <a href="#anthropic">3. Anthropic SDK 调用</a>
-      <a href="#streaming">4. 流式响应</a>
-      <a href="#models">5. 可用模型列表</a>
-      <a href="#errors">6. 错误码</a>
-      <a href="#billing">7. 计费精度</a>
-      <a href="#limits">8. 限速</a>
-      <a href="#full-ref">完整 API 参考 →</a>
+      <div class="toc-title" data-i18n="quickstart.toc.title">On this page</div>
+      <a href="#overview" data-i18n="quickstart.toc.overview">Overview</a>
+      <a href="#auth" data-i18n="quickstart.toc.auth">1. Auth</a>
+      <a href="#openai" data-i18n="quickstart.toc.openai">2. OpenAI SDK</a>
+      <a href="#anthropic" data-i18n="quickstart.toc.anthropic">3. Anthropic SDK</a>
+      <a href="#streaming" data-i18n="quickstart.toc.streaming">4. Streaming</a>
+      <a href="#models" data-i18n="quickstart.toc.models">5. Available models</a>
+      <a href="#errors" data-i18n="quickstart.toc.errors">6. Error codes</a>
+      <a href="#billing" data-i18n="quickstart.toc.billing">7. Billing precision</a>
+      <a href="#limits" data-i18n="quickstart.toc.limits">8. Rate limits</a>
+      <a href="#full-ref" data-i18n="quickstart.toc.full_ref">Full API reference →</a>
     </aside>
 
     <main>
-      <h1>Quickstart</h1>
-      <p class="lead">5 分钟从注册到第一条流量。Prism 兼容 OpenAI 和 Anthropic 两套协议，
-        现成 SDK 改个 base_url 就能用。</p>
+      <h1 data-i18n="quickstart.title">Quickstart</h1>
+      <p class="lead" data-i18n="quickstart.lead">From sign-up to first request in 5 minutes.</p>
+      <div class="lang-note" data-i18n="quickstart.body_note"></div>
 
       <h2 id="overview">概览</h2>
       <p>Prism 网关是个透明的算力路由：你给我们 API 请求，我们转发给上游（OpenAI / Anthropic /

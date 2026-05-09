@@ -1,6 +1,7 @@
 /* Composition root for Prism homepage. */
 
 const { useState: useStateApp, useEffect: useEffectApp } = React;
+const t = window.t;
 
 function App() {
   return (
@@ -50,10 +51,8 @@ function TopNav() {
     const token = localStorage.getItem('prism_token');
     const exp = localStorage.getItem('prism_token_expires');
     if (!token) return;
-    // If we know the expiry and it's already past, treat as logged out.
     if (exp && new Date(exp).getTime() < Date.now()) return;
     setLoggedIn(true);
-    // Best-effort fetch /account/me for the email display (non-blocking).
     fetch('/suanli-api/account/me', {
       headers: { 'Authorization': 'Bearer ' + token },
     })
@@ -69,34 +68,35 @@ function TopNav() {
           <Logo size={28}/>
           <div>
             <span className="nav-brand-name display">Prism</span>
-            <span className="nav-brand-zh">棱镜</span>
+            <span className="nav-brand-zh">{t('meta.brand_zh')}</span>
           </div>
         </a>
 
         <div className="nav-links">
           <a className="nav-link active" href="#">
-            <span className="zh">首页</span>
+            <span className="zh">{t('nav.home')}</span>
             <span className="en mono">home</span>
           </a>
           <a className="nav-link" href="#models">
-            <span className="zh">模型</span>
+            <span className="zh">{t('nav.models')}</span>
             <span className="en mono">models</span>
           </a>
           <a className="nav-link" href="#pricing">
-            <span className="zh">定价</span>
+            <span className="zh">{t('nav.pricing')}</span>
             <span className="en mono">pricing</span>
           </a>
           <a className="nav-link" href="/api-docs">
-            <span className="zh">文档</span>
+            <span className="zh">{t('nav.docs')}</span>
             <span className="en mono">docs</span>
           </a>
           <a className="nav-link" href="/console">
-            <span className="zh">控制台</span>
+            <span className="zh">{t('nav.console')}</span>
             <span className="en mono">console</span>
           </a>
         </div>
 
         <div className="nav-right">
+          <LangPicker/>
           {loggedIn ? (
             <>
               {userEmail && (
@@ -105,15 +105,15 @@ function TopNav() {
                 </span>
               )}
               <a className="cta-primary nav-cta" href="/console">
-                进入控制台
+                {t('nav.go_console')}
                 <Arrow2/>
               </a>
             </>
           ) : (
             <>
-              <a className="nav-login" href="/login">登录</a>
+              <a className="nav-login" href="/login">{t('nav.login')}</a>
               <a className="cta-primary nav-cta" href="/signup">
-                立即开始
+                {t('nav.signup')}
                 <Arrow2/>
               </a>
             </>
@@ -123,6 +123,28 @@ function TopNav() {
     </nav>
   );
 }
+
+/* ─── Language picker (shared across pages — also reused by signup/login/console via window.PrismLangPicker) ─── */
+
+function LangPicker() {
+  const supported = window.PRISM_I18N_SUPPORTED || ['en', 'zh', 'ja', 'ko', 'fr'];
+  const current = window.LANG || 'en';
+  return (
+    <select
+      className="lang-picker mono"
+      value={current}
+      onChange={e => window.setLang(e.target.value)}
+      title={t('nav.lang_label')}
+      aria-label={t('nav.lang_label')}
+    >
+      {supported.map(code => (
+        <option key={code} value={code}>{t('lang.' + code)}</option>
+      ))}
+    </select>
+  );
+}
+// Expose so other pages (signup/login/console) can use it without re-defining.
+window.PrismLangPicker = LangPicker;
 
 /* Mount */
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);

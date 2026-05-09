@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>验证邮箱 · Prism</title>
+  <title data-i18n="verify.title">Verify email · Prism</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -13,21 +13,23 @@
 </head>
 <body>
   <div id="root"></div>
+  <script src="/suanli/i18n.js"></script>
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
   <script type="text/babel">
 const { useState, useEffect } = React;
+const t = window.t;
 
 function VerifyEmailPage() {
   const [state, setState] = useState('loading'); // 'loading' | 'ok' | 'err'
-  const [message, setMessage] = useState('正在验证你的邮箱…');
+  const [message, setMessage] = useState(t('verify.loading'));
   const token = new URLSearchParams(location.search).get('token') || '';
 
   useEffect(() => {
     if (!token) {
       setState('err');
-      setMessage('链接无效：缺少 token 参数。请检查邮件中的链接是否完整。');
+      setMessage(t('verify.no_token'));
       return;
     }
     fetch('/suanli-api/auth/verify-email', {
@@ -39,23 +41,23 @@ function VerifyEmailPage() {
         const data = await r.json().catch(() => ({}));
         if (r.ok) {
           setState('ok');
-          setMessage('邮箱验证成功！3 秒后跳转到登录页…');
+          setMessage(t('verify.success_redirect'));
           setTimeout(() => { location.href = '/login'; }, 3000);
         } else {
           setState('err');
           const code = data?.error?.code;
           if (code === 'expired_verification_token') {
-            setMessage('验证链接已过期（24 小时有效期）。请重新注册或联系管理员重发。');
+            setMessage(t('verify.expired'));
           } else if (code === 'invalid_verification_token') {
-            setMessage('验证链接无效或已被使用过。如果你已经验证成功，可以直接登录。');
+            setMessage(t('verify.invalid'));
           } else {
-            setMessage(data?.error?.message || `验证失败（HTTP ${r.status}）`);
+            setMessage(data?.error?.message || `${t('verify.error_title')} (HTTP ${r.status})`);
           }
         }
       })
       .catch((e) => {
         setState('err');
-        setMessage('网络错误：' + (e.message || '请稍后重试'));
+        setMessage(t('verify.network_err') + (e.message || t('verify.retry_later')));
       });
   }, [token]);
 
@@ -77,16 +79,16 @@ function VerifyEmailPage() {
         </div>
         <div className="brand-tagline">
           <h2 className="display">Prism</h2>
-          <p>邮箱验证</p>
+          <p>{t('verify.brand_tag')}</p>
           <p className="mono">cost = price · always</p>
         </div>
       </div>
 
       <div className="auth-form">
         <h1 className="display">
-          {state === 'loading' && '验证中…'}
-          {state === 'ok' && '✓ 验证成功'}
-          {state === 'err' && '✗ 验证失败'}
+          {state === 'loading' && t('verify.h_loading')}
+          {state === 'ok' && t('verify.h_ok')}
+          {state === 'err' && t('verify.h_err')}
         </h1>
 
         <p style={{
@@ -107,18 +109,18 @@ function VerifyEmailPage() {
 
         <div style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           {state === 'ok' && (
-            <a className="cta-primary auth-submit" href="/login">立即登录</a>
+            <a className="cta-primary auth-submit" href="/login">{t('verify.cta_login')}</a>
           )}
           {state === 'err' && (
             <>
-              <a className="cta-primary auth-submit" href="/login">尝试登录</a>
-              <a className="cta-ghost" href="/signup">重新注册</a>
+              <a className="cta-primary auth-submit" href="/login">{t('verify.cta_try')}</a>
+              <a className="cta-ghost" href="/signup">{t('verify.cta_signup')}</a>
             </>
           )}
         </div>
 
         <p className="auth-mini" style={{ marginTop: '32px' }}>
-          <a href="/suanli/">← 回首页</a>
+          <a href="/suanli/">{t('verify.back_home')}</a>
         </p>
       </div>
     </div>

@@ -163,7 +163,33 @@ input, textarea, select { font-family: inherit; }
 .nav-link .zh { font-size: 13px; }
 .nav-link .en { font-size: 10px; color: var(--text-muted); margin-top: 1px; letter-spacing: 0.06em; text-transform: uppercase; }
 
-.nav-right { display: flex; align-items: center; gap: 18px; }
+.nav-right { display: flex; align-items: center; gap: 14px; }
+
+/* ─── Language picker ─────────────────────────────────────── */
+.lang-picker {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-secondary);
+  padding: 5px 26px 5px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M2 4l3 3 3-3' stroke='%23a1a1aa' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color var(--dur-hover) var(--ease-out), color var(--dur-hover) var(--ease-out);
+}
+.lang-picker:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
+}
+.lang-picker:focus { outline: none; border-color: rgba(139, 92, 246, 0.5); }
+.lang-picker option { background: #18181B; color: #fafafa; }
+
+/* Auth pages (light theme) lang picker is overridden in auth-pages.css */
+
 .nav-login {
   color: var(--text-secondary);
   text-decoration: none;

@@ -1,6 +1,24 @@
 /* Prism Console SPA — single hash-routed app with 5 tabs. */
 
 const { useState, useEffect, useCallback } = React;
+const t = window.t;
+
+function ConsoleLangPicker() {
+  const supported = window.PRISM_I18N_SUPPORTED;
+  const current = window.LANG;
+  return (
+    <select
+      className="lang-picker mono"
+      value={current}
+      onChange={e => window.setLang(e.target.value)}
+      title={t('nav.lang_label')}
+      aria-label={t('nav.lang_label')}
+      style={{marginRight: 12}}
+    >
+      {supported.map(c => <option key={c} value={c}>{t('lang.' + c)}</option>)}
+    </select>
+  );
+}
 
 /* ── Icon system: Lucide-style inline SVGs (no third-party deps) ──────── */
 
@@ -41,11 +59,11 @@ function Icon({ name, size = 16, className = '', color }) {
 }
 
 const TABS = [
-  { id: 'overview', label: '概览',     icon: 'home' },
-  { id: 'keys',     label: 'API Keys', icon: 'key' },
-  { id: 'usage',    label: '用量',     icon: 'chart' },
-  { id: 'billing',  label: '充值',     icon: 'wallet' },
-  { id: 'settings', label: '设置',     icon: 'settings' },
+  { id: 'overview', labelKey: 'console.tab.overview', icon: 'home' },
+  { id: 'keys',     labelKey: 'console.tab.keys',     icon: 'key' },
+  { id: 'usage',    labelKey: 'console.tab.usage',    icon: 'chart' },
+  { id: 'billing',  labelKey: 'console.tab.billing',  icon: 'wallet' },
+  { id: 'settings', labelKey: 'console.tab.settings', icon: 'settings' },
 ];
 
 function getTabFromHash() {
@@ -93,59 +111,62 @@ function ConsoleApp() {
   }
 
   if (error) return <div className="cs-main"><div className="auth-error">{error}</div></div>;
-  if (!me) return <div className="cs-main"><div className="cs-empty">加载中…</div></div>;
+  if (!me) return <div className="cs-main"><div className="cs-empty">{t('console.loading')}</div></div>;
 
   return (
     <div className="cs-shell">
       <aside className="cs-sidebar">
-        <a href="/suanli/" className="cs-brand cs-brand-link" title="回首页">
+        <a href="/suanli/" className="cs-brand cs-brand-link" title={t('console.brand_back')}>
           <span className="cs-brand-mark">P</span>
           <span className="cs-brand-name">Prism</span>
         </a>
-        {TABS.map(t => (
-          <a key={t.id} href={`#${t.id}`}
-             className={`cs-nav-link ${tab === t.id ? 'active' : ''}`}>
-            <Icon name={t.icon}/>
-            <span>{t.label}</span>
+        {TABS.map(tt => (
+          <a key={tt.id} href={`#${tt.id}`}
+             className={`cs-nav-link ${tab === tt.id ? 'active' : ''}`}>
+            <Icon name={tt.icon}/>
+            <span>{t(tt.labelKey)}</span>
           </a>
         ))}
         <div style={{height: 12}}/>
         <a href="/api-docs" target="_blank" rel="noreferrer"
-           className="cs-nav-link cs-nav-external" title="OpenAPI 交互文档">
+           className="cs-nav-link cs-nav-external" title={t('console.api_docs_tip')}>
           <Icon name="book"/>
-          <span>API 文档</span>
+          <span>{t('console.api_docs')}</span>
           <Icon name="arrowUp" size={11} className="cs-icon-ext"/>
         </a>
         <a href="/quickstart" target="_blank" rel="noreferrer"
-           className="cs-nav-link cs-nav-external" title="5 分钟接入指南">
+           className="cs-nav-link cs-nav-external" title={t('console.quickstart_tip')}>
           <Icon name="zap"/>
-          <span>Quickstart</span>
+          <span>{t('console.quickstart')}</span>
           <Icon name="arrowUp" size={11} className="cs-icon-ext"/>
         </a>
         <div className="cs-nav-foot">
           {me.email}
           <br/>
-          <span className="mono" style={{fontSize: 11, color: 'var(--text-muted)'}}>tier: {me.tier}</span>
-          <button className="cs-logout" onClick={logout}>退出登录 →</button>
+          <span className="mono" style={{fontSize: 11, color: 'var(--text-muted)'}}>{t('console.tier')}: {me.tier}</span>
+          <button className="cs-logout" onClick={logout}>{t('console.logout')}</button>
         </div>
       </aside>
 
       <main className="cs-main">
         <div className="cs-page-header">
-          <h1>{TABS.find(t => t.id === tab).label}</h1>
-          <div className="cs-balance-pill">
-            <span style={{display: 'inline-flex', gap: 12, alignItems: 'center'}}>
-              <span title="USDC / USDT 充值进 USD 钱包">
-                <span style={{color: 'var(--text-muted)', fontSize: 11, marginRight: 4}}>USD</span>
-                <strong>{fmtUSD(me.balance_usd)}</strong>
+          <h1>{t(TABS.find(tt => tt.id === tab).labelKey)}</h1>
+          <div style={{display: 'flex', alignItems: 'center'}}>
+            <ConsoleLangPicker/>
+            <div className="cs-balance-pill">
+              <span style={{display: 'inline-flex', gap: 12, alignItems: 'center'}}>
+                <span title={t('console.bal.usd_tip')}>
+                  <span style={{color: 'var(--text-muted)', fontSize: 11, marginRight: 4}}>USD</span>
+                  <strong>{fmtUSD(me.balance_usd)}</strong>
+                </span>
+                <span style={{color: 'var(--text-faint)', fontSize: 11}}>·</span>
+                <span title={t('console.bal.cny_tip')}>
+                  <span style={{color: 'var(--text-muted)', fontSize: 11, marginRight: 4}}>CNY</span>
+                  <strong>¥{(me.balance_cny ?? 0).toFixed(2)}</strong>
+                </span>
               </span>
-              <span style={{color: 'var(--text-faint)', fontSize: 11}}>·</span>
-              <span title="支付宝 / 微信 充值进 CNY 钱包">
-                <span style={{color: 'var(--text-muted)', fontSize: 11, marginRight: 4}}>CNY</span>
-                <strong>¥{(me.balance_cny ?? 0).toFixed(2)}</strong>
-              </span>
-            </span>
-            <a href="#billing" className="cs-btn cs-btn-primary" style={{padding: '4px 12px'}}>充值</a>
+              <a href="#billing" className="cs-btn cs-btn-primary" style={{padding: '4px 12px'}}>{t('console.topup_btn')}</a>
+            </div>
           </div>
         </div>
 
@@ -176,31 +197,31 @@ function Overview({ me }) {
   return (
     <>
       <div className="cs-metrics">
-        <Metric label="USD 钱包" value={fmtUSD(me.balance_usd)}
-          meta={`累计 ${fmtUSD(me.total_topped_up_usd)} · USDC 入此`}
+        <Metric label={t('console.metric.usd_wallet')} value={fmtUSD(me.balance_usd)}
+          meta={t('console.metric.usd_meta', { usd: fmtUSD(me.total_topped_up_usd) })}
           icon="dollar" accent="green"/>
-        <Metric label="CNY 钱包" value={`¥${(me.balance_cny ?? 0).toFixed(2)}`}
-          meta={`累计 ¥${(me.total_topped_up_cny ?? 0).toFixed(2)} · 支付宝/微信入此`}
+        <Metric label={t('console.metric.cny_wallet')} value={`¥${(me.balance_cny ?? 0).toFixed(2)}`}
+          meta={t('console.metric.cny_meta', { cny: `¥${(me.total_topped_up_cny ?? 0).toFixed(2)}` })}
           icon="zap" accent="magenta"/>
-        <Metric label="本月调用" value={fmtCompact(totalRequests)} meta="近 30 天"/>
-        <Metric label="本月成本" value={fmtUSD(totalCost)} meta="近 30 天 (USD 折算)"/>
+        <Metric label={t('console.metric.month_calls')} value={fmtCompact(totalRequests)} meta={t('console.metric.month_calls_meta')}/>
+        <Metric label={t('console.metric.month_cost')} value={fmtUSD(totalCost)} meta={t('console.metric.month_cost_meta')}/>
       </div>
 
       <section className="cs-section">
-        <h2>最近请求</h2>
+        <h2>{t('console.recent.title')}</h2>
         {recent.length === 0 ? (
-          <div className="cs-empty">暂无请求记录。配置 API Key 后调用任一模型即出现。</div>
+          <div className="cs-empty">{t('console.recent.empty')}</div>
         ) : (
           <table className="cs-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>模型</th>
-                <th>状态</th>
-                <th>Tokens (in/out)</th>
-                <th>成本</th>
-                <th>延迟</th>
-                <th>详情</th>
+                <th>{t('console.col.time')}</th>
+                <th>{t('console.col.model')}</th>
+                <th>{t('console.col.status')}</th>
+                <th>{t('console.col.tokens')}</th>
+                <th>{t('console.col.cost')}</th>
+                <th>{t('console.col.latency')}</th>
+                <th>{t('console.col.detail')}</th>
               </tr>
             </thead>
             <tbody>
@@ -213,7 +234,7 @@ function Overview({ me }) {
                   <td>{fmtUSD(r.cost_usd)}</td>
                   <td className="mono">{r.latency_ms}ms</td>
                   <td>
-                    <a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>查看</a>
+                    <a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>{t('console.view')}</a>
                   </td>
                 </tr>
               ))}
@@ -308,7 +329,7 @@ function Keys() {
   }
 
   async function revoke(id) {
-    if (!confirm('确定撤销该 Key？已使用此 Key 的客户端会立即失效。')) return;
+    if (!confirm(t('console.keys.confirm_revoke'))) return;
     await PrismAPI.delete(`/account/api-keys/${id}`);
     refresh();
   }
@@ -317,23 +338,23 @@ function Keys() {
     <>
       <div className="cs-row-between" style={{marginBottom: 16}}>
         <p style={{color: 'var(--text-muted)', fontSize: 13, margin: 0}}>
-          Prism Key 是你接入 Claude Code / Cursor / Codex 等客户端的凭证。
+          {t('console.keys.intro')}
         </p>
-        <button className="cs-btn cs-btn-primary" onClick={() => setCreating(true)}>+ 新建 Key</button>
+        <button className="cs-btn cs-btn-primary" onClick={() => setCreating(true)}>{t('keys.create_btn')}</button>
       </div>
 
       {keys && keys.length === 0 ? (
-        <div className="cs-empty">还没创建过 Key。点上面"新建 Key"开始。</div>
+        <div className="cs-empty">{t('console.keys.empty')}</div>
       ) : keys && (
         <table className="cs-table">
           <thead>
             <tr>
-              <th>名称</th>
-              <th>前缀…后4</th>
-              <th>限速 (RPM)</th>
-              <th>状态</th>
-              <th>最近使用</th>
-              <th>操作</th>
+              <th>{t('console.col.name')}</th>
+              <th>{t('console.keys.col.prefix')}</th>
+              <th>{t('console.keys.col.rpm')}</th>
+              <th>{t('console.col.status')}</th>
+              <th>{t('console.keys.col.last_used')}</th>
+              <th>{t('console.col.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -341,18 +362,18 @@ function Keys() {
               <tr key={k.id}>
                 <td>{k.name || '-'}</td>
                 <td className="mono">{k.prefix}…{k.last4}</td>
-                <td className="mono">{k.rate_limit_rpm || '默认'}</td>
+                <td className="mono">{k.rate_limit_rpm || t('console.keys.rpm_default')}</td>
                 <td>
                   {k.enabled
                     ? <span className="cs-pill cs-pill-ok">enabled</span>
                     : <span className="cs-pill cs-pill-err">revoked</span>}
                 </td>
                 <td className="mono" style={{fontSize: 11, color: 'var(--text-muted)'}}>
-                  {k.last_used_at?.slice(0, 19) || '从未'}
+                  {k.last_used_at?.slice(0, 19) || t('console.keys.never_used')}
                 </td>
                 <td>
                   {k.enabled && (
-                    <button className="cs-btn cs-btn-danger" onClick={() => revoke(k.id)}>撤销</button>
+                    <button className="cs-btn cs-btn-danger" onClick={() => revoke(k.id)}>{t('keys.revoke')}</button>
                   )}
                 </td>
               </tr>
@@ -384,22 +405,22 @@ function CreateKeyModal({ onClose, onCreate }) {
   return (
     <div className="cs-modal-overlay" onClick={onClose}>
       <div className="cs-modal" onClick={e => e.stopPropagation()}>
-        <h3>新建 API Key</h3>
+        <h3>{t('keys.modal_title')}</h3>
         <div style={{marginBottom: 12}}>
-          <label className="auth-label">名称（可选）</label>
+          <label className="auth-label">{t('keys.name_label')}</label>
           <input className="auth-input" value={name} onChange={e => setName(e.target.value)}
-            placeholder="例如：MacBook Claude Code" style={{width: '100%', boxSizing: 'border-box'}}/>
+            placeholder={t('console.keys.modal.name_ph')} style={{width: '100%', boxSizing: 'border-box'}}/>
         </div>
         <div>
-          <label className="auth-label">RPM 限速（可选，留空用默认 tier 限速）</label>
+          <label className="auth-label">{t('console.keys.modal.rpm_label')}</label>
           <input className="auth-input" type="number" min={1} value={rpm}
             onChange={e => setRpm(e.target.value)} placeholder="600"
             style={{width: '100%', boxSizing: 'border-box'}}/>
         </div>
         <div className="cs-modal-actions">
-          <button className="cs-btn" onClick={onClose} disabled={busy}>取消</button>
+          <button className="cs-btn" onClick={onClose} disabled={busy}>{t('keys.cancel')}</button>
           <button className="cs-btn cs-btn-primary" onClick={submit} disabled={busy}>
-            {busy ? '创建中…' : '创建'}
+            {busy ? t('console.keys.modal.creating') : t('keys.create')}
           </button>
         </div>
       </div>
@@ -417,26 +438,24 @@ function CreatedKeyModal({ data, onClose }) {
   return (
     <div className="cs-modal-overlay">
       <div className="cs-modal">
-        <h3>Key 已创建</h3>
-        <p style={{color: 'var(--text-muted)', fontSize: 13}}>
-          这是<strong>唯一一次</strong>显示完整 Key。立即复制并保存到安全的地方——
-          关闭此窗口后只能看到前缀和后 4 位。
-        </p>
+        <h3>{t('console.keys.created.title')}</h3>
+        <p style={{color: 'var(--text-muted)', fontSize: 13}}
+           dangerouslySetInnerHTML={{ __html: t('console.keys.created.body') }}/>
         <div className="cs-key-display">
           <span style={{flex: 1}}>{data.key}</span>
-          <button className="cs-btn" onClick={copy}>{copied ? '已复制' : '复制'}</button>
+          <button className="cs-btn" onClick={copy}>{copied ? t('console.keys.created.copied') : t('keys.copy')}</button>
         </div>
         <p style={{color: 'var(--text-muted)', fontSize: 12, fontFamily: 'var(--font-mono)'}}>
-          # 接入 Claude Code:<br/>
+          # Claude Code:<br/>
           export ANTHROPIC_BASE_URL=https://www.ai100trading.cn/suanli-api<br/>
           export ANTHROPIC_AUTH_TOKEN={data.key.slice(0, 14)}…<br/>
           <br/>
-          # 接入 OpenAI SDK / Cursor:<br/>
+          # OpenAI SDK / Cursor:<br/>
           base_url=https://www.ai100trading.cn/suanli-api/v1<br/>
           api_key={data.key.slice(0, 14)}…
         </p>
         <div className="cs-modal-actions">
-          <button className="cs-btn cs-btn-primary" onClick={onClose}>我已保存</button>
+          <button className="cs-btn cs-btn-primary" onClick={onClose}>{t('console.keys.created.saved')}</button>
         </div>
       </div>
     </div>
@@ -532,23 +551,23 @@ function Usage() {
       {/* Filter bar */}
       <div className="cs-filter-bar">
         <div>
-          <label className="cs-filter-label">起始日期</label>
+          <label className="cs-filter-label">{t('usage.filter.since')}</label>
           <input className="cs-input cs-input-date" type="date"
             value={filters.since}
             onChange={e => setFilters({...filters, since: e.target.value})}/>
         </div>
         <div>
-          <label className="cs-filter-label">结束日期</label>
+          <label className="cs-filter-label">{t('usage.filter.until')}</label>
           <input className="cs-input cs-input-date" type="date"
             value={filters.until}
             onChange={e => setFilters({...filters, until: e.target.value})}/>
         </div>
         <div>
-          <label className="cs-filter-label">模型</label>
+          <label className="cs-filter-label">{t('usage.filter.model')}</label>
           <select className="cs-input"
             value={filters.model}
             onChange={e => setFilters({...filters, model: e.target.value})}>
-            <option value="">全部模型</option>
+            <option value="">{t('usage.filter.all_models')}</option>
             {models.map(m => (
               <option key={m.model_id} value={m.model_id}>
                 {m.model_id} ({m.requests})
@@ -557,11 +576,11 @@ function Usage() {
           </select>
         </div>
         <div>
-          <label className="cs-filter-label">状态</label>
+          <label className="cs-filter-label">{t('usage.filter.status')}</label>
           <select className="cs-input"
             value={filters.status}
             onChange={e => setFilters({...filters, status: e.target.value})}>
-            <option value="">全部状态</option>
+            <option value="">{t('usage.filter.all_status')}</option>
             <option value="ok">ok</option>
             <option value="error">error</option>
             <option value="partial">partial</option>
@@ -571,57 +590,57 @@ function Usage() {
         <div style={{alignSelf: 'flex-end'}}>
           <button className="cs-btn"
             onClick={() => setFilters({since: weekAgo, until: todayStr, model: '', status: ''})}>
-            重置
+            {t('usage.filter.reset')}
           </button>
         </div>
       </div>
 
       {/* Summary cards */}
       <div className="cs-summary-cards">
-        <Metric label="请求数" value={fmtCompact(summary.total_requests || 0)}
-                meta="该时间段" icon="zap" accent="cyan"/>
-        <Metric label="输入 tokens" value={fmtCompact(summary.total_input_tokens || 0)}
+        <Metric label={t('usage.summary.requests')} value={fmtCompact(summary.total_requests || 0)}
+                meta={t('usage.summary.range')} icon="zap" accent="cyan"/>
+        <Metric label={t('usage.summary.input')} value={fmtCompact(summary.total_input_tokens || 0)}
                 icon="arrowDown" accent="purple"/>
-        <Metric label="输出 tokens" value={fmtCompact(summary.total_output_tokens || 0)}
+        <Metric label={t('usage.summary.output')} value={fmtCompact(summary.total_output_tokens || 0)}
                 icon="arrowUp" accent="magenta"/>
-        <Metric label="总成本" value={fmtUSD(summary.total_cost_usd || 0)}
-                meta="cost = price · 0% 加价" icon="dollar" accent="green"/>
+        <Metric label={t('usage.summary.cost')} value={fmtUSD(summary.total_cost_usd || 0)}
+                meta={t('usage.summary.zeromarkup')} icon="dollar" accent="green"/>
       </div>
 
       {/* Aggregate section */}
       <section className="cs-section">
         <div className="cs-section-head">
-          <h2>汇总</h2>
+          <h2>{t('usage.agg.title')}</h2>
           <div className="cs-row" style={{gap: 6}}>
-            <span style={{fontSize: 12, color: 'var(--text-muted)', marginRight: 6}}>分组：</span>
+            <span style={{fontSize: 12, color: 'var(--text-muted)', marginRight: 6}}>{t('usage.agg.group_label')}</span>
             {[
-              {id: 'model', label: '按模型'},
-              {id: 'channel', label: '按渠道（可展开）'},
-              {id: 'day', label: '按日期'},
-              {id: 'key', label: '按 Key'},
+              {id: 'model',   labelKey: 'usage.agg.by_model'},
+              {id: 'channel', labelKey: 'usage.agg.by_channel'},
+              {id: 'day',     labelKey: 'usage.agg.by_day'},
+              {id: 'key',     labelKey: 'usage.agg.by_key'},
             ].map(g => (
               <button key={g.id}
                 className={`cs-btn ${groupBy === g.id ? 'cs-btn-primary' : ''}`}
                 onClick={() => { setGroupBy(g.id); setExpanded(null); }}
                 style={{fontSize: 12, padding: '6px 12px'}}>
-                {g.label}
+                {t(g.labelKey)}
               </button>
             ))}
           </div>
         </div>
 
         {aggData.length === 0 ? (
-          <div className="cs-empty">该时间段无请求数据</div>
+          <div className="cs-empty">{t('usage.agg.empty')}</div>
         ) : (
           <table className="cs-table">
             <thead>
               <tr>
                 <th>{groupByLabel(groupBy)}</th>
-                <th>请求数</th>
-                <th>输入 tokens</th>
-                <th>输出 tokens</th>
-                <th>成本 (USD)</th>
-                <th>平均延迟</th>
+                <th>{t('usage.agg.col.requests')}</th>
+                <th>{t('usage.agg.col.input')}</th>
+                <th>{t('usage.agg.col.output')}</th>
+                <th>{t('usage.agg.col.cost')}</th>
+                <th>{t('usage.agg.col.avg_lat')}</th>
               </tr>
             </thead>
             <tbody>
@@ -631,7 +650,7 @@ function Usage() {
                 const isOpen = isChannel && expanded === childKey;
                 const expandable = isChannel && (r.models || []).length > 0;
                 const display = isChannel
-                  ? (r.channel_name ? `${r.channel_name} (#${r.bucket})` : `(unrouted)`)
+                  ? (r.channel_name ? `${r.channel_name} (#${r.bucket})` : t('usage.agg.unrouted'))
                   : (r.bucket || '-');
                 return (
                   <React.Fragment key={i}>
@@ -680,43 +699,43 @@ function Usage() {
       {/* Detail log section */}
       <section className="cs-section">
         <div className="cs-section-head">
-          <h2>请求明细</h2>
+          <h2>{t('usage.detail.title')}</h2>
           <div className="cs-page-ctrl">
             <span className="mono cs-page-info">
-              {total === 0 ? '0 条' : `${fromN}–${toN} / 共 ${total} 条`}
+              {total === 0 ? t('usage.detail.zero') : t('usage.detail.range', { from: fromN, to: toN, total })}
             </span>
             <select className="cs-input"
               value={pageSize}
               onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-              style={{width: 90}}>
-              <option value={25}>25 / 页</option>
-              <option value={50}>50 / 页</option>
-              <option value={100}>100 / 页</option>
+              style={{width: 110}}>
+              <option value={25}>{t('usage.detail.per_page', { n: 25 })}</option>
+              <option value={50}>{t('usage.detail.per_page', { n: 50 })}</option>
+              <option value={100}>{t('usage.detail.per_page', { n: 100 })}</option>
             </select>
             <button className="cs-btn" disabled={page <= 1 || loadingPage}
-              onClick={() => setPage(p => Math.max(1, p - 1))}>← 上一页</button>
+              onClick={() => setPage(p => Math.max(1, p - 1))}>{t('usage.detail.prev')}</button>
             <span className="mono cs-page-info">
               {pages > 0 ? `${page} / ${pages}` : '-'}
             </span>
             <button className="cs-btn" disabled={page >= pages || loadingPage}
-              onClick={() => setPage(p => Math.min(pages, p + 1))}>下一页 →</button>
+              onClick={() => setPage(p => Math.min(pages, p + 1))}>{t('usage.detail.next')}</button>
           </div>
         </div>
 
         {requests.data.length === 0 ? (
-          <div className="cs-empty">该时间段+筛选条件下无请求</div>
+          <div className="cs-empty">{t('usage.detail.empty')}</div>
         ) : (
           <table className="cs-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>模型</th>
-                <th>状态</th>
-                <th>输入 tok</th>
-                <th>输出 tok</th>
-                <th>延迟</th>
-                <th>成本</th>
-                <th>详情</th>
+                <th>{t('console.col.time')}</th>
+                <th>{t('console.col.model')}</th>
+                <th>{t('console.col.status')}</th>
+                <th>{t('usage.detail.col.input')}</th>
+                <th>{t('usage.detail.col.output')}</th>
+                <th>{t('console.col.latency')}</th>
+                <th>{t('console.col.cost')}</th>
+                <th>{t('console.col.detail')}</th>
               </tr>
             </thead>
             <tbody>
@@ -729,7 +748,7 @@ function Usage() {
                   <td className="mono">{fmtCompact(r.tokens.completion)}</td>
                   <td className="mono">{r.latency_ms ? r.latency_ms + 'ms' : '-'}</td>
                   <td>{fmtUSD(r.cost_usd)}</td>
-                  <td><a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>查看</a></td>
+                  <td><a href={`#usage/${r.request_id}`} className="cs-btn" style={{padding: '4px 10px'}}>{t('console.view')}</a></td>
                 </tr>
               ))}
             </tbody>
@@ -743,7 +762,12 @@ function Usage() {
 }
 
 function groupByLabel(g) {
-  return ({model: '模型', channel: '渠道', day: '日期', key: 'API Key'})[g] || g;
+  return ({
+    model:   t('usage.agg.label.model'),
+    channel: t('usage.agg.label.channel'),
+    day:     t('usage.agg.label.day'),
+    key:     t('usage.agg.label.key'),
+  })[g] || g;
 }
 
 function RequestDetailModal({ d, onClose }) {
@@ -751,22 +775,22 @@ function RequestDetailModal({ d, onClose }) {
   return (
     <div className="cs-modal-overlay" onClick={onClose}>
       <div className="cs-modal" onClick={e => e.stopPropagation()} style={{minWidth: 600}}>
-        <h3>请求详情</h3>
+        <h3>{t('usage.modal.title')}</h3>
         <div style={{display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 14px', fontSize: 13}}>
-          <span style={{color: 'var(--text-muted)'}}>请求 ID</span>
+          <span style={{color: 'var(--text-muted)'}}>{t('usage.modal.req_id')}</span>
           <span className="mono">{d.request_id}</span>
-          <span style={{color: 'var(--text-muted)'}}>模型</span>
+          <span style={{color: 'var(--text-muted)'}}>{t('console.col.model')}</span>
           <span>{d.model_id}</span>
-          <span style={{color: 'var(--text-muted)'}}>状态</span>
+          <span style={{color: 'var(--text-muted)'}}>{t('console.col.status')}</span>
           <span><StatusPill status={d.status}/></span>
-          <span style={{color: 'var(--text-muted)'}}>时间</span>
+          <span style={{color: 'var(--text-muted)'}}>{t('console.col.time')}</span>
           <span className="mono">{d.created_at}</span>
-          <span style={{color: 'var(--text-muted)'}}>流式</span>
-          <span>{d.is_streaming ? '是' : '否'}</span>
+          <span style={{color: 'var(--text-muted)'}}>{t('usage.modal.streaming')}</span>
+          <span>{d.is_streaming ? t('usage.modal.yes') : t('usage.modal.no')}</span>
         </div>
 
         <h4 style={{margin: '20px 0 10px', fontFamily: 'var(--font-display)'}}>
-          🎯 渠道明牌（差异化）
+          {t('usage.modal.channel_section')}
         </h4>
         {ch ? (
           <div className="cs-channel-card">
@@ -776,28 +800,28 @@ function RequestDetailModal({ d, onClose }) {
               {ch.region && <span>region: <strong>{ch.region}</strong></span>}
             </div>
             <div className="cs-channel-meta">
-              <span>{ch.policy.no_training ? '✓ 不训练' : '⚠ 可能训练'}</span>
-              <span>日志保留 {ch.policy.log_retention_days || '?'} 天</span>
+              <span>{ch.policy.no_training ? t('usage.modal.no_training') : t('usage.modal.may_train')}</span>
+              <span>{t('usage.modal.log_retention', { days: ch.policy.log_retention_days || '?' })}</span>
             </div>
           </div>
         ) : (
-          <div className="cs-empty" style={{padding: 20}}>请求未到达上游（错误或超时）</div>
+          <div className="cs-empty" style={{padding: 20}}>{t('usage.modal.no_upstream')}</div>
         )}
 
         {d.routing?.tried_channels?.length > 1 && (
           <>
-            <h4 style={{margin: '20px 0 10px', fontFamily: 'var(--font-display)'}}>重试历史</h4>
+            <h4 style={{margin: '20px 0 10px', fontFamily: 'var(--font-display)'}}>{t('usage.modal.retry_history')}</h4>
             <table className="cs-table">
               <thead>
-                <tr><th>顺序</th><th>Channel ID</th><th>HTTP 状态</th><th>结果</th></tr>
+                <tr><th>{t('usage.modal.col.order')}</th><th>Channel ID</th><th>{t('usage.modal.col.http')}</th><th>{t('usage.modal.col.result')}</th></tr>
               </thead>
               <tbody>
-                {d.routing.tried_channels.map((t, i) => (
+                {d.routing.tried_channels.map((tc, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
-                    <td className="mono">{t.channel_id}</td>
-                    <td className="mono">{t.status || '-'}</td>
-                    <td className="mono" style={{fontSize: 11}}>{t.error?.slice(0, 80) || 'ok'}</td>
+                    <td className="mono">{tc.channel_id}</td>
+                    <td className="mono">{tc.status || '-'}</td>
+                    <td className="mono" style={{fontSize: 11}}>{tc.error?.slice(0, 80) || 'ok'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -805,7 +829,7 @@ function RequestDetailModal({ d, onClose }) {
           </>
         )}
 
-        <h4 style={{margin: '20px 0 10px', fontFamily: 'var(--font-display)'}}>Token 分解</h4>
+        <h4 style={{margin: '20px 0 10px', fontFamily: 'var(--font-display)'}}>{t('usage.modal.tok_section')}</h4>
         <table className="cs-table">
           <tbody>
             <tr><td>Input (prompt)</td><td className="mono">{d.tokens.prompt.toLocaleString()}</td></tr>
@@ -813,7 +837,7 @@ function RequestDetailModal({ d, onClose }) {
             {d.tokens.cache_read > 0 && <tr><td>Cache read</td><td className="mono">{d.tokens.cache_read.toLocaleString()}</td></tr>}
             {d.tokens.cache_write > 0 && <tr><td>Cache write</td><td className="mono">{d.tokens.cache_write.toLocaleString()}</td></tr>}
             {d.tokens.reasoning > 0 && <tr><td>Reasoning</td><td className="mono">{d.tokens.reasoning.toLocaleString()}</td></tr>}
-            <tr><td><strong>成本</strong></td><td className="mono"><strong>{fmtUSD(d.cost_usd)}</strong></td></tr>
+            <tr><td><strong>{t('usage.modal.cost_label')}</strong></td><td className="mono"><strong>{fmtUSD(d.cost_usd)}</strong></td></tr>
           </tbody>
         </table>
 
@@ -822,7 +846,7 @@ function RequestDetailModal({ d, onClose }) {
         )}
 
         <div className="cs-modal-actions">
-          <button className="cs-btn" onClick={onClose}>关闭</button>
+          <button className="cs-btn" onClick={onClose}>{t('usage.modal.close')}</button>
         </div>
       </div>
     </div>
@@ -834,12 +858,12 @@ function RequestDetailModal({ d, onClose }) {
 // Channel keys keep `usdt-*` internally for DB CHECK constraint compatibility.
 // Display labels show USDC — that's what we actually accept now.
 const USDT_CHANNELS = [
-  { key: 'usdt-trc20', title: 'USDC (TRC20)', en: 'Tron · 国内首选',
-    note: '链上费 ≈ $1 · 推荐金额 ≥ $50',     icon: 'diamond', accent: '#2775CA' },
-  { key: 'usdt-sol',   title: 'USDC (Solana)', en: 'SPL · 美区首选',
-    note: '链上费 ≈ $0.001 · 任意金额',       icon: 'circle',  accent: '#2775CA' },
-  { key: 'usdt-evm',   title: 'USDC (EVM)', en: 'BSC / Polygon / Arbitrum / ETH',
-    note: 'BSC 链上费 ≈ $0.3 · 推荐 BSC',     icon: 'hexagon', accent: '#2775CA' },
+  { key: 'usdt-trc20', title: 'USDC (TRC20)', enKey: 'pay.usdc.trc.tag',
+    noteKey: 'pay.usdc.trc.warn',     icon: 'diamond', accent: '#2775CA' },
+  { key: 'usdt-sol',   title: 'USDC (Solana)', enKey: 'pay.usdc.sol.tag',
+    noteKey: 'pay.usdc.sol.warn',       icon: 'circle',  accent: '#2775CA' },
+  { key: 'usdt-evm',   title: 'USDC (EVM)', enKey: 'pay.usdc.evm.tag',
+    noteKey: 'pay.usdc.evm.warn',     icon: 'hexagon', accent: '#2775CA' },
 ];
 
 function Billing({ me }) {
@@ -860,7 +884,7 @@ function Billing({ me }) {
       setActiveIntent(data);
       refresh();
     } catch (err) {
-      alert('创建充值意向失败：' + (err.message || ''));
+      alert(t('billing.usdt.create_failed') + (err.message || ''));
     } finally {
       setLoadingChannel(null);
     }
@@ -869,22 +893,21 @@ function Billing({ me }) {
   return (
     <>
       <div className="cs-metrics">
-        <Metric label="USD 钱包" value={fmtUSD(me.balance_usd)}
-          meta={`累计 ${fmtUSD(me.total_topped_up_usd)}`}
+        <Metric label={t('console.metric.usd_wallet')} value={fmtUSD(me.balance_usd)}
+          meta={t('console.metric.usd_meta', { usd: fmtUSD(me.total_topped_up_usd) }).split(' · ')[0]}
           icon="dollar" accent="green"/>
-        <Metric label="CNY 钱包" value={`¥${(me.balance_cny ?? 0).toFixed(2)}`}
-          meta={`累计 ¥${(me.total_topped_up_cny ?? 0).toFixed(2)}`}
+        <Metric label={t('console.metric.cny_wallet')} value={`¥${(me.balance_cny ?? 0).toFixed(2)}`}
+          meta={t('console.metric.cny_meta', { cny: `¥${(me.total_topped_up_cny ?? 0).toFixed(2)}` }).split(' · ')[0]}
           icon="zap" accent="magenta"/>
-        <Metric label="充值手续费" value="1.5%" meta="cost = price"/>
-        <Metric label="跨币种汇率" value="6.5 / 7.0"
-          meta="USD→CN model · CNY→intl model"/>
+        <Metric label={t('billing.metric.fee')} value="1.5%" meta="cost = price"/>
+        <Metric label={t('billing.metric.fx')} value="6.5 / 7.0"
+          meta={t('billing.metric.fx_meta')}/>
       </div>
 
       <section className="cs-section">
-        <h2>USD 钱包充值（USDC 自动到账）</h2>
+        <h2>{t('billing.usd.title')}</h2>
         <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
-          点击任一通道生成专属充值地址 + 精确金额 · 链上扫到自动入账（30 秒内）·
-          1.5% 手续费 · 进 USD 钱包，调用国外模型 1:1 不损失
+          {t('billing.usd.intro')}
         </p>
         <div className="cs-pay-grid">
           {USDT_CHANNELS.map(ch => (
@@ -896,40 +919,38 @@ function Billing({ me }) {
       </section>
 
       <section className="cs-section">
-        <h2>CNY 钱包充值（支付宝 / 微信，人工核对）</h2>
+        <h2>{t('billing.cny.title')}</h2>
         <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
-          扫码付款后请把支付截图 + 你的邮箱（<span className="mono">{me.email}</span>）+ 充值金额
-          发到运营邮箱 <span className="mono">ops@ai100trading.cn</span>，工作时间 1 小时内入 CNY 钱包。
-          调用 Doubao / MiniMax / 等国内模型 1:1 不损失；调用国外模型按 7 ¥ = 1 USD 折算。
+          {t('billing.cny.intro', { email: me.email, ops: 'ops@ai100trading.cn' })}
         </p>
         <div className="cs-pay-grid">
           <DomesticPayCard
-            title="支付宝" en="Alipay · 君 (**瑞)"
+            titleKey="pay.alipay.title" en={t('billing.alipay.label')}
             qrUrl="/suanli/qr-alipay.jpg"
             tone="alipay"/>
           <DomesticPayCard
-            title="微信支付" en="WeChat Pay · 六一学长 (**瑞)"
+            titleKey="pay.wechat.title" en={t('billing.wechat.label')}
             qrUrl="/suanli/qr-wechat.jpg"
             tone="wechat"/>
         </div>
       </section>
 
       <section className="cs-section">
-        <h2>充值记录</h2>
+        <h2>{t('billing.history.title')}</h2>
         {topups.length === 0 ? (
-          <div className="cs-empty">还没充值记录。点上方按钮发起一笔充值。</div>
+          <div className="cs-empty">{t('billing.history.empty')}</div>
         ) : (
           <table className="cs-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>通道</th>
-                <th>金额</th>
-                <th>手续费</th>
-                <th>实际到账</th>
-                <th>状态</th>
+                <th>{t('console.col.time')}</th>
+                <th>{t('billing.history.col.channel')}</th>
+                <th>{t('billing.history.col.amount')}</th>
+                <th>{t('billing.history.col.fee')}</th>
+                <th>{t('billing.history.col.credited')}</th>
+                <th>{t('console.col.status')}</th>
                 <th>memo</th>
-                <th>tx hash</th>
+                <th>{t('billing.history.col.tx')}</th>
               </tr>
             </thead>
             <tbody>
@@ -962,6 +983,8 @@ function Billing({ me }) {
 
 function UsdtCard({ channel, onStart, loading }) {
   const [amount, setAmount] = useState(50);
+  const fee = (amount * 0.015).toFixed(2);
+  const credited = (amount - amount * 0.015).toFixed(2);
   return (
     <div className="cs-pay-card" style={{borderColor: channel.accent + '40'}}>
       <div className="cs-pay-card-head">
@@ -974,12 +997,12 @@ function UsdtCard({ channel, onStart, loading }) {
         </span>
         <div>
           <div className="cs-pay-card-title">{channel.title}</div>
-          <div className="cs-pay-card-en mono">{channel.en}</div>
+          <div className="cs-pay-card-en mono">{t(channel.enKey)}</div>
         </div>
       </div>
-      <div className="cs-pay-card-note mono">{channel.note}</div>
+      <div className="cs-pay-card-note mono">{t(channel.noteKey)}</div>
 
-      <label className="cs-label" style={{marginTop: 12}}>充值金额（USD）</label>
+      <label className="cs-label" style={{marginTop: 12}}>{t('billing.usdt.amount_label')}</label>
       <div style={{display: 'flex', gap: 8}}>
         <input className="cs-input" type="number" min={5} max={100000} step={1}
           value={amount} onChange={e => setAmount(Number(e.target.value))}/>
@@ -987,12 +1010,11 @@ function UsdtCard({ channel, onStart, loading }) {
           className="cs-btn cs-btn-primary"
           disabled={loading || amount < 5}
           onClick={() => onStart(amount)}>
-          {loading ? '生成中…' : '立即充值'}
+          {loading ? t('billing.usdt.generating') : t('billing.usdt.go')}
         </button>
       </div>
       <div className="cs-pay-card-foot mono">
-        最低 $5 · 约 ${(amount * 0.0005).toFixed(2)} 手续费 ·
-        到账 ${(amount - amount * 0.0005).toFixed(2)}
+        {t('billing.usdt.foot', { fee, credited })}
       </div>
     </div>
   );
@@ -1037,61 +1059,62 @@ function UsdtIntentModal({ intent, onClose, onPaid }) {
       <div className="cs-modal" onClick={e => e.stopPropagation()}
         style={{maxWidth: 560}}>
         <h2 style={{marginTop: 0}}>
-          {status === 'paid' ? '✓ 已到账' : `${intent.channel.toUpperCase()} 充值`}
+          {status === 'paid' ? t('billing.intent.paid_title') : t('billing.intent.title', { ch: intent.channel.toUpperCase() })}
         </h2>
 
         {status !== 'paid' && (
           <>
-            <div className="cs-pay-banner mono">
-              请在 <strong>{mins}:{secs}</strong> 内向以下地址转账
-              <strong> 精确金额 ${intent.expected_amount_usd}</strong>
-              {intent.network ? ` · 网络: ${intent.network.toUpperCase()}` : ''}
-            </div>
+            <div className="cs-pay-banner mono"
+                 dangerouslySetInnerHTML={{ __html: t('billing.intent.banner', {
+                   amt: intent.expected_amount_usd,
+                   min: mins,
+                   sec: secs,
+                   net: intent.network ? t('billing.intent.network', { net: intent.network.toUpperCase() }) : '',
+                 }) }}/>
 
-            <label className="cs-label">收款地址</label>
+            <label className="cs-label">{t('billing.intent.addr')}</label>
             <div className="cs-pay-row">
               <code className="cs-pay-addr mono">{intent.address}</code>
-              <button className="cs-btn" onClick={copyAddr}>复制地址</button>
+              <button className="cs-btn" onClick={copyAddr}>{t('billing.intent.copy_addr')}</button>
             </div>
 
             <label className="cs-label" style={{marginTop: 12}}>
-              精确金额 · 必须分毫不差
+              {t('billing.intent.amt')}
             </label>
             <div className="cs-pay-row">
               <code className="cs-pay-addr mono" style={{fontSize: 18, color: 'var(--accent-amber)'}}>
                 ${intent.expected_amount_usd} USDC
               </code>
-              <button className="cs-btn" onClick={copyAmt}>复制金额</button>
+              <button className="cs-btn" onClick={copyAmt}>{t('billing.intent.copy_amt')}</button>
             </div>
 
-            <div className="cs-pay-warn mono">
-              ⚠️ memo: <strong>{intent.memo}</strong> ·
-              金额最后 4 位 µ¢ 用于识别你的充值 · 多了少了不到账
-            </div>
+            <div className="cs-pay-warn mono"
+                 dangerouslySetInnerHTML={{ __html: t('billing.intent.warn', { memo: intent.memo }) }}/>
 
             <div style={{marginTop: 16, fontSize: 13, color: 'var(--text-muted)'}}>
-              转账后此页面 30 秒内自动检测到账 · 你也可以关掉此窗稍后回来看「充值记录」
+              {t('billing.intent.tail')}
             </div>
           </>
         )}
 
         {status === 'paid' && (
           <div className="cs-pay-success">
-            <p>到账金额：<strong>${intent.credited_usd}</strong></p>
-            <p>余额刷新中…</p>
+            <p dangerouslySetInnerHTML={{ __html: t('billing.intent.success_amt', { amt: intent.credited_usd }) }}/>
+            <p>{t('billing.intent.refresh')}</p>
           </div>
         )}
 
         <div className="cs-modal-actions">
-          <button className="cs-btn" onClick={onClose}>关闭</button>
+          <button className="cs-btn" onClick={onClose}>{t('usage.modal.close')}</button>
         </div>
       </div>
     </div>
   );
 }
 
-function DomesticPayCard({ title, en, qrUrl, tone }) {
+function DomesticPayCard({ titleKey, en, qrUrl, tone }) {
   const [imgError, setImgError] = useState(false);
+  const title = t(titleKey);
   return (
     <div className={`cs-pay-card cs-pay-card-${tone}`}>
       <div className="cs-pay-card-head">
@@ -1103,15 +1126,15 @@ function DomesticPayCard({ title, en, qrUrl, tone }) {
       <div className="cs-qr-box">
         {imgError ? (
           <div className="cs-qr-placeholder mono">
-            （二维码待补 · {qrUrl.split('/').pop()}）
+            {t('billing.qr.placeholder', { file: qrUrl.split('/').pop() })}
           </div>
         ) : (
-          <img src={qrUrl} alt={`${title} 收款码`} className="cs-qr-img"
+          <img src={qrUrl} alt={title} className="cs-qr-img"
             onError={() => setImgError(true)}/>
         )}
       </div>
       <div className="cs-pay-card-foot mono">
-        扫码付款后发支付截图 + 邮箱到 ops@ai100trading.cn
+        {t('billing.qr.foot')}
       </div>
     </div>
   );
@@ -1131,7 +1154,7 @@ function Settings({ me, setMe }) {
     try {
       const updated = await PrismAPI.patch('/account/me', { display_name: name });
       setMe(updated);
-      setMsg('✓ 已保存');
+      setMsg(t('settings.saved_ok'));
     } catch (err) {
       setMsg('✗ ' + err.message);
     }
@@ -1142,7 +1165,7 @@ function Settings({ me, setMe }) {
     setMsg('');
     try {
       await PrismAPI.post('/auth/change-password', { old_password: oldPwd, new_password: newPwd });
-      setMsg('✓ 密码已修改');
+      setMsg(t('settings.pwd_changed'));
       setOldPwd(''); setNewPwd('');
     } catch (err) {
       setMsg('✗ ' + err.message);
@@ -1152,27 +1175,27 @@ function Settings({ me, setMe }) {
   return (
     <>
       <section className="cs-section">
-        <h2>个人资料</h2>
+        <h2>{t('settings.profile.title')}</h2>
         <form onSubmit={saveProfile} style={{maxWidth: 480}}>
-          <label className="auth-label">显示名（可选）</label>
+          <label className="auth-label">{t('settings.display_name')}</label>
           <input className="auth-input" value={name} onChange={e => setName(e.target.value)}
             style={{width: '100%', boxSizing: 'border-box'}}/>
-          <button className="cs-btn cs-btn-primary" type="submit">保存</button>
+          <button className="cs-btn cs-btn-primary" type="submit">{t('settings.save')}</button>
         </form>
       </section>
 
       <section className="cs-section">
-        <h2>修改密码</h2>
+        <h2>{t('settings.changepwd.title')}</h2>
         <form onSubmit={changePwd} style={{maxWidth: 480}}>
-          <label className="auth-label">当前密码</label>
+          <label className="auth-label">{t('settings.current_pwd')}</label>
           <input className="auth-input" type="password" required value={oldPwd}
             onChange={e => setOldPwd(e.target.value)}
             style={{width: '100%', boxSizing: 'border-box'}}/>
-          <label className="auth-label">新密码（至少 10 位）</label>
+          <label className="auth-label">{t('settings.new_pwd')}</label>
           <input className="auth-input" type="password" required minLength={10} value={newPwd}
             onChange={e => setNewPwd(e.target.value)}
             style={{width: '100%', boxSizing: 'border-box'}}/>
-          <button className="cs-btn cs-btn-primary" type="submit">修改密码</button>
+          <button className="cs-btn cs-btn-primary" type="submit">{t('settings.changepwd_btn')}</button>
         </form>
       </section>
 

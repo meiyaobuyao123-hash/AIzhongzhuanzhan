@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>注册 · Prism</title>
+  <title data-i18n="meta.title.signup">Sign up · Prism</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -13,12 +13,31 @@
 </head>
 <body>
   <div id="root"></div>
+  <script src="/suanli/i18n.js"></script>
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
   <script src="/suanli/api-client.js"></script>
   <script type="text/babel">
 const { useState } = React;
+const t = window.t;
+
+function AuthLangPicker() {
+  const supported = window.PRISM_I18N_SUPPORTED;
+  const current = window.LANG;
+  return (
+    <div className="auth-lang-row">
+      <select
+        className="lang-picker mono"
+        value={current}
+        onChange={e => window.setLang(e.target.value)}
+        title={t('nav.lang_label')}
+      >
+        {supported.map(c => <option key={c} value={c}>{t('lang.' + c)}</option>)}
+      </select>
+    </div>
+  );
+}
 
 function SignupPage() {
   const [email, setEmail] = useState('');
@@ -31,12 +50,11 @@ function SignupPage() {
   async function onSubmit(e) {
     e.preventDefault();
     setError('');
-    if (password !== confirm) { setError('两次输入的密码不一致'); return; }
-    if (password.length < 10) { setError('密码至少 10 位'); return; }
+    if (password !== confirm) { setError(t('auth.error.password_mismatch')); return; }
+    if (password.length < 10) { setError(t('auth.error.password_short')); return; }
     setLoading(true);
     try {
       const data = await PrismAPI.post('/auth/register', { email, password }, { requireAuth: false });
-      // If backend auto-verified (no SMTP gate), it returns a token. Log in immediately.
       if (data.token) {
         PrismAPI.setToken(data.token, data.expires_at);
         location.href = '/console';
@@ -44,7 +62,7 @@ function SignupPage() {
       }
       setSubmitted(data);
     } catch (err) {
-      setError(err.message || '注册失败');
+      setError(err.message || t('auth.error.signup_failed'));
     } finally {
       setLoading(false);
     }
@@ -55,11 +73,13 @@ function SignupPage() {
       <div className="auth-shell">
         <BrandSide/>
         <div className="auth-form">
-          <h1 className="display">查收验证邮件</h1>
-          <p className="auth-sub">我们已向 <strong>{submitted.email}</strong> 发送了验证链接，
-            点击链接完成验证后即可登录。链接 24 小时内有效。</p>
-          <p className="auth-mini mono">如未收到，检查垃圾邮件，或联系运营。</p>
-          <a href="/login" className="cta-ghost auth-back">返回登录</a>
+          <AuthLangPicker/>
+          <h1 className="display">{t('auth.signup.success_title')}</h1>
+          <p className="auth-sub" dangerouslySetInnerHTML={{
+            __html: t('auth.signup.success_body', { email: submitted.email })
+          }}/>
+          <p className="auth-mini mono">{t('auth.signup.success_mini')}</p>
+          <a href="/login" className="cta-ghost auth-back">{t('auth.signup.success_back')}</a>
         </div>
       </div>
     );
@@ -69,33 +89,34 @@ function SignupPage() {
     <div className="auth-shell">
       <BrandSide/>
       <form className="auth-form" onSubmit={onSubmit}>
-        <h1 className="display">创建你的 Prism 账号</h1>
-        <p className="auth-sub">充值即用 · 1.5% 手续费 · 0% 加价</p>
+        <AuthLangPicker/>
+        <h1 className="display">{t('auth.signup.title')}</h1>
+        <p className="auth-sub">{t('auth.signup.sub')}</p>
 
-        <label className="auth-label">邮箱</label>
+        <label className="auth-label">{t('auth.email_label')}</label>
         <input className="auth-input" type="email" required value={email}
           onChange={e => setEmail(e.target.value)} placeholder="dev@example.com"/>
 
-        <label className="auth-label">密码</label>
+        <label className="auth-label">{t('auth.password_label')}</label>
         <input className="auth-input" type="password" required minLength={10} value={password}
-          onChange={e => setPassword(e.target.value)} placeholder="至少 10 位"/>
+          onChange={e => setPassword(e.target.value)} placeholder={t('auth.password_hint')}/>
 
-        <label className="auth-label">再次输入密码</label>
+        <label className="auth-label">{t('auth.confirm_label')}</label>
         <input className="auth-input" type="password" required value={confirm}
           onChange={e => setConfirm(e.target.value)}/>
 
         {error && <div className="auth-error">{error}</div>}
 
         <button className="cta-primary auth-submit" type="submit" disabled={loading}>
-          {loading ? '处理中…' : '创建账号'}
+          {loading ? t('auth.signup.submitting') : t('auth.signup.submit')}
         </button>
 
         <OAuthButtons/>
 
         <p className="auth-mini">
-          已有账号？<a href="/login">登录</a>
+          {t('auth.signup.have_account')}<a href="/login">{t('auth.login.title')}</a>
           ·
-          <a href="/suanli/">回首页</a>
+          <a href="/suanli/">{t('auth.back_home')}</a>
         </p>
       </form>
     </div>
@@ -113,11 +134,11 @@ function OAuthButtons() {
   if (!providers.length) return null;
   return (
     <div className="auth-oauth">
-      <div className="auth-divider"><span>或</span></div>
+      <div className="auth-divider"><span>{t('auth.oauth.or')}</span></div>
       {providers.map(p => (
         <a key={p.name} className="cta-ghost auth-oauth-btn"
            href={`/suanli-api/auth/oauth/${p.name}/authorize`}>
-          {p.name === 'github' ? '使用 GitHub 继续' : '使用 Google 继续'}
+          {p.name === 'github' ? t('auth.oauth.github') : t('auth.oauth.google')}
         </a>
       ))}
     </div>
@@ -142,7 +163,7 @@ function BrandSide() {
       </div>
       <div className="brand-tagline">
         <h2 className="display">Prism</h2>
-        <p>200+ 模型 · 一个 Key</p>
+        <p>{t('auth.brand.signup_tag')}</p>
         <p className="mono">cost = price · always</p>
       </div>
     </div>

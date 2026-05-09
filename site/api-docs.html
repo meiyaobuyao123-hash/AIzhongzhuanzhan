@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>API Reference · Prism</title>
+  <title data-i18n="console.api_docs">API Reference · Prism</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -30,7 +30,24 @@
       border-radius: 6px; font-weight: 500;
     }
     .topbar-cta:hover { background: #4F58B8; }
+    .lang-picker-light {
+      background: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.10);
+      color: #3F3F46;
+      padding: 5px 26px 5px 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M2 4l3 3 3-3' stroke='%2371717a' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+    .lang-picker-light:hover { border-color: rgba(0, 0, 0, 0.2); }
   </style>
+  <script src="/suanli/i18n.js"></script>
 </head>
 <body>
   <div class="topbar">
@@ -39,13 +56,26 @@
       <span class="topbar-name">Prism</span>
     </a>
     <nav class="topbar-nav">
-      <a href="/quickstart">Quickstart</a>
-      <a href="/api-docs" class="active">API Reference</a>
-      <a href="/suanli/#pricing">Pricing</a>
-      <a href="/console">Console</a>
-      <a href="/login" class="topbar-cta">登录</a>
+      <a href="/quickstart" data-i18n="console.quickstart">Quickstart</a>
+      <a href="/api-docs" class="active" data-i18n="console.api_docs">API Reference</a>
+      <a href="/suanli/#pricing" data-i18n="nav.pricing">Pricing</a>
+      <a href="/console" data-i18n="nav.console">Console</a>
+      <select class="lang-picker-light" id="api-docs-lang" title="Language"></select>
+      <a href="/login" class="topbar-cta" data-i18n="nav.login">Log in</a>
     </nav>
   </div>
+  <script>
+    (function () {
+      const sel = document.getElementById('api-docs-lang');
+      (window.PRISM_I18N_SUPPORTED || []).forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = window.t('lang.' + c);
+        if (c === window.LANG) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', e => window.setLang(e.target.value));
+    })();
+  </script>
 
   <!-- Scalar API Reference renders the OpenAPI spec served by FastAPI. -->
   <script

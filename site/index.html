@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Prism · 透明的 AI 模型聚合网关</title>
-  <meta name="description" content="200+ 模型，一个 OpenAI 兼容 API。0% 加价，渠道明牌。Claude Code · Cursor · Codex 直接接入。"/>
+  <title data-i18n="meta.title.home">Prism · transparent AI model gateway</title>
+  <meta name="description" data-i18n-attr="content:meta.description" content="200+ models, one OpenAI-compatible API. 0% markup, channels in plain sight."/>
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -14,6 +14,9 @@
 </head>
 <body>
   <div id="root"></div>
+
+  <!-- i18n must load before everything else so window.t is available -->
+  <script src="i18n.js"></script>
 
   <!-- React 18 + Babel standalone (matches the Models prototype stack) -->
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>

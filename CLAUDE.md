@@ -235,13 +235,27 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 
 ---
 
-## 8. 当前状态（更新于 2026-05-08）
+## 8. 当前状态（更新于 2026-05-09）
 
 - **v0.1**：✅ 已上线（commit `1e7cce8`）。骨架 + DB + admin CLI + 单 channel
-- **v0.2**：✅ 全部 stage（B1-B6）已 commit + 部署。等用户给上游 Key 做 B7 联调验收
-- **v0.3**：🚧 开发中。文档：`docs/v0.3-spec.md`
+- **v0.2**：✅ 已上线。鉴权 / Web 控制台 / 多 channel + failover / OAI↔Anthropic 协议互转
+- **v0.3**：✅ 已上线。USDT 链上自动监听 / 价格²反比 / cache 粘性 / 邀请返佣 / 容量预警
+- **v0.4**：✅ 已上线（commit `39f6351`）。**双币种钱包**（USD µ¢ + CNY µ¥）+ 跨币种**非对称汇率**
+  - 国内模型（doubao/minimax/abab）按 ¥ 原生计价；海外模型按 $ 原生计价
+  - 同币种钱包优先 1:1 扣费；跨币种走 FX rate（USD→CN model = 6.5；CNY→intl model = 7.0，对我们有利）
+  - 充值费率从 0.05% → **1.5% 全通道**（覆盖 Stripe/链上 gas/支付通道实际成本）
+  - USDT → **USDC** 全栈切换（钱包地址不变，token 切换）
+- **v0.5**：✅ 已上线（commit `180146b`）。**价格自动巡检系统**
+  - 新表：`model_price_history`（每次价格变动一条审计行）+ `price_anomalies`（待人工确认的差异）
+  - `models` 加 3 列：`price_set_at` / `price_set_by` / `price_source_url`
+  - `usage_logs` 加 1 列：`price_version_id` → 每条请求扣费时回写当时用的哪一版价（未来逐笔退款依据）
+  - `app/pricing/` 新包：4 个 source 骨架（Anthropic 已实现；Deepseek/Doubao/MiniMax 待补）+ checker.run_check_cycle
+  - **强约束**："收多必退、收少自吞" — 自动检测不直接改 DB，必须人工 `prism-admin price confirm` 才落库
+  - CLI：`prism-admin price list / check / anomalies / confirm / reject / history`
+  - 25 个模型已写入 baseline history；30 条历史 usage_log 已回填 price_version_id
 
-145+ 测试通过。Web 控制台已部署到 https://www.ai100trading.cn/console。
+**226 测试通过**（v0.3→206 / v0.4 +9 / v0.5 +11）。
+Web 控制台已部署到 https://www.ai100trading.cn/console。
 
 ---
 
@@ -256,3 +270,34 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 - **不要假设**：不存在的功能、不知道的细节，问而不要编
 
 未来 Claude 在这个项目继续工作时，**先读 docs/{prd, v0.1-implementation-plan, v0.2-spec, v0.3-spec, routing-strategy, token-accounting, payment-methods}.md**，再看代码。
+
+---
+
+## 10. v0.4 / v0.5 关键代码位置（速查）
+
+```
+backend/app/billing/recorder.py
+  _convert_to_other_wallet()          跨币种 FX 换算
+  _deduct_from_wallets()              同币种优先 → 跨币种兜底 → InsufficientBalance
+  record_request_outcome()            写 usage_log + 双钱包扣费 + balance_transaction
+                                      (含 price_version_id 回写)
+
+backend/app/pricing/checker.py
+  run_check_cycle()                   一次完整巡检：source → diff → 写 anomaly
+  confirm_anomaly()                   人工点确认 → 写 history + 更新 model + 标记 resolved
+  reject_anomaly()                    人工否决 → 保持 DB 价
+  get_active_price_version_id()       recorder 用它 stamp usage_log
+
+backend/app/pricing/sources/
+  base.py                             PriceSource 抽象基类
+  anthropic_web.py                    爬 anthropic.com/pricing（regex 解析；页面改版需调）
+  {deepseek,doubao,minimax}_web.py    skeleton，raise NotImplemented
+
+backend/scripts/prism_admin.py
+  price 子命令组                      list/check/anomalies/confirm/reject/history
+```
+
+**汇率配置**：`backend/app/config.py` 的 `fx_usd_to_cny_for_cn_model=6.5` 和
+`fx_cny_to_usd_for_intl_model=7.0`。改这两个值前要先想清楚——它们决定了我们 FX 利润率。
+
+**价格巡检 cadence**：当前是手动 `prism-admin price check` 触发。lifespan 里没起 background loop（user 决定不让 6h auto cron，先手跑稳定再说）。

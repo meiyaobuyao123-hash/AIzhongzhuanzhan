@@ -13,6 +13,107 @@
 */
 
 const { useState: useStateS, useEffect: useEffectS, useMemo: useMemoS, useRef: useRefS } = React;
+const _ts = window.t;  // local alias for t()
+
+/* ─── i18n-driven content lists (replaces data.js for translatable copy) ─ */
+
+const TRUST_LIST = [
+  { num: '20+',  labelKey: 'trust.models'    },
+  { num: '5',    labelKey: 'trust.providers' },
+  { num: '1.5%', labelKey: 'trust.fee'       },
+  { num: '0%',   labelKey: 'trust.markup', highlight: true },
+];
+
+const FEATURES_LIST = [
+  { icon: 'price',    titleKey: 'feature.price.title',    bodyKey: 'feature.price.body'    },
+  { icon: 'channel',  titleKey: 'feature.channel.title',  bodyKey: 'feature.channel.body'  },
+  { icon: 'shield',   titleKey: 'feature.shield.title',   bodyKey: 'feature.shield.body'   },
+  { icon: 'plug',     titleKey: 'feature.plug.title',     bodyKey: 'feature.plug.body'     },
+  { icon: 'failover', titleKey: 'feature.failover.title', bodyKey: 'feature.failover.body' },
+  { icon: 'observe',  titleKey: 'feature.observe.title',  bodyKey: 'feature.observe.body'  },
+];
+
+const NOTDOING_LIST = [
+  { titleKey: 'nd.slicing.title',   bodyKey: 'nd.slicing.body'   },
+  { titleKey: 'nd.downgrade.title', bodyKey: 'nd.downgrade.body' },
+  { titleKey: 'nd.fees.title',      bodyKey: 'nd.fees.body'      },
+  { titleKey: 'nd.blackbox.title',  bodyKey: 'nd.blackbox.body'  },
+];
+
+const CATEGORIES_LIST = [
+  {
+    id: 'coding', titleKey: 'cat.coding.title', whyKey: 'cat.coding.why',
+    picks: [
+      { model: 'Claude Sonnet 4.6', provider: 'anthropic', tipKey: 'cat.coding.tip1', price: '$3 / $15' },
+      { model: 'Claude Haiku 4.5',  provider: 'anthropic', tipKey: 'cat.coding.tip2', price: '$0.80 / $4' },
+      { model: 'DeepSeek V4',       provider: 'deepseek',  tipKey: 'cat.coding.tip3', price: '$0.27 / $1.10' },
+    ],
+  },
+  {
+    id: 'reasoning', titleKey: 'cat.reasoning.title', whyKey: 'cat.reasoning.why',
+    picks: [
+      { model: 'Claude Opus 4.7',   provider: 'anthropic', tipKey: 'cat.reasoning.tip1', price: '$15 / $75' },
+      { model: 'OpenAI o3-mini',    provider: 'openai',    tipKey: 'cat.reasoning.tip2', price: '$1.10 / $4.40' },
+      { model: 'DeepSeek Reasoner', provider: 'deepseek',  tipKey: 'cat.reasoning.tip3', price: '$0.55 / $2.19' },
+    ],
+  },
+  {
+    id: 'cheap', titleKey: 'cat.cheap.title', whyKey: 'cat.cheap.why',
+    picks: [
+      { model: 'Doubao 1.5 Lite',       provider: 'doubao', tipKey: 'cat.cheap.tip1', price: '$0.04 / $0.08' },
+      { model: 'Doubao Seed 1.6 Flash', provider: 'doubao', tipKey: 'cat.cheap.tip2', price: '$0.02 / $0.21' },
+      { model: 'GPT-4o mini',           provider: 'openai', tipKey: 'cat.cheap.tip3', price: '$0.15 / $0.60' },
+    ],
+  },
+  {
+    id: 'long', titleKey: 'cat.long.title', whyKey: 'cat.long.why',
+    picks: [
+      { model: 'Claude Opus 4.7',   provider: 'anthropic', tipKey: 'cat.long.tip1', price: '$15 / $75' },
+      { model: 'Claude Sonnet 4.6', provider: 'anthropic', tipKey: 'cat.long.tip2', price: '$3 / $15' },
+      { model: 'MiniMax Text-01',   provider: 'minimax',   tipKey: 'cat.long.tip3', price: '$0.14 / $1.11' },
+    ],
+  },
+];
+
+const CHANNEL_EXAMPLES = {
+  'claude-opus-4-7': {
+    nameKey: 'channels.ex.anthropic_official', providerKey: 'meta.brand_zh',
+    channels: [
+      { nameKey: 'channels.ex.anthropic_official', region: 'us-east-1', p50: 420, weight: 100, health: 'ok',
+        policyKey: 'channels.ex.policy_default' },
+    ],
+  },
+  'gpt-5': {
+    nameKey: 'channels.ex.openai_official', providerKey: 'meta.brand_zh',
+    channels: [
+      { nameKey: 'channels.ex.openai_official', region: 'us', p50: 410, weight: 100, health: 'ok',
+        policyKey: 'channels.ex.policy_default' },
+    ],
+  },
+  'deepseek-chat': {
+    nameKey: 'channels.ex.deepseek_official', providerKey: 'meta.brand_zh',
+    channels: [
+      { nameKey: 'channels.ex.deepseek_official', region: 'cn', p50: 360, weight: 100, health: 'ok',
+        policyKey: 'channels.ex.policy_default' },
+    ],
+  },
+  'doubao-seed-1-6-250615': {
+    nameKey: 'channels.ex.volcengine', providerKey: 'channels.ex.volcengine_provider',
+    channels: [
+      { nameKey: 'channels.ex.volcengine', region: 'cn-beijing', p50: 340, weight: 100, health: 'ok',
+        policyKey: 'channels.ex.policy_default' },
+    ],
+  },
+};
+
+const FAQ_LIST = [
+  { qKey: 'faq.q1.q', aKey: 'faq.q1.a' },
+  { qKey: 'faq.q2.q', aKey: 'faq.q2.a' },
+  { qKey: 'faq.q3.q', aKey: 'faq.q3.a' },
+  { qKey: 'faq.q4.q', aKey: 'faq.q4.a' },
+  { qKey: 'faq.q5.q', aKey: 'faq.q5.a' },
+  { qKey: 'faq.q6.q', aKey: 'faq.q6.a' },
+];
 
 /* ─── 2 · Trust strip ───────────────────────────────────────────── */
 
@@ -20,12 +121,11 @@ function TrustStrip() {
   return (
     <section className="trust-strip">
       <div className="trust-inner">
-        {window.PRISM_TRUST_METRICS.map((m, i) => (
+        {TRUST_LIST.map((m, i) => (
           <div key={i} className={`trust-item ${m.highlight ? 'highlight' : ''}`}>
             <div className="trust-num display">{m.num}</div>
             <div className="trust-label">
-              <span>{m.label}</span>
-              <span className="mono trust-en">{m.en}</span>
+              <span>{_ts(m.labelKey)}</span>
             </div>
           </div>
         ))}
@@ -40,19 +140,18 @@ function FeaturesGrid() {
   return (
     <section className="features" id="features">
       <SectionHeader
-        kicker="为什么选 Prism"
-        title="把同行不敢明说的事 · 写在合同里"
-        sub="Why Prism · what others quietly avoid, we write into the contract."
+        kicker={_ts('features.kicker')}
+        title={_ts('features.title')}
+        sub={_ts('features.sub')}
       />
       <div className="features-grid">
-        {window.PRISM_FEATURES.map((f, i) => (
+        {FEATURES_LIST.map((f, i) => (
           <article key={i} className="feature-card">
             <FeatureIcon name={f.icon} />
             <h3 className="feature-title display">
-              {f.title}
-              <span className="mono feature-en">{f.en}</span>
+              {_ts(f.titleKey)}
             </h3>
-            <p className="feature-body">{f.body}</p>
+            <p className="feature-body">{_ts(f.bodyKey)}</p>
             <div className="feature-glow" aria-hidden="true" />
           </article>
         ))}
@@ -128,7 +227,7 @@ function FeatureIcon({ name }) {
 function LiveDemo() {
   const [lang, setLang] = useStateS('python');
   const [streamText, setStreamText] = useStateS('');
-  const fullResponse = '一行代码切 Claude，再一行切 GPT-5。\n你的客户端、提示词、prompt cache 一行不用改。';
+  const fullResponse = _ts('demo.term_response');
   const tickRef = useRefS(null);
 
   useEffectS(() => {
@@ -143,6 +242,7 @@ function LiveDemo() {
     return () => clearInterval(tickRef.current);
   }, [lang]);
 
+  const userMsg = _ts('demo.message_user');
   const codeSamples = {
     python:
 `from openai import OpenAI
@@ -152,7 +252,7 @@ client = OpenAI(
 )
 stream = client.chat.completions.create(
     model="claude-sonnet-4-6",
-    messages=[{"role":"user","content":"演示一下"}],
+    messages=[{"role":"user","content":"${userMsg}"}],
     stream=True,
 )
 for chunk in stream:
@@ -165,7 +265,7 @@ const client = new OpenAI({
 });
 const stream = await client.chat.completions.create({
   model: "claude-sonnet-4-6",
-  messages: [{ role: "user", content: "演示一下" }],
+  messages: [{ role: "user", content: "${userMsg}" }],
   stream: true,
 });
 for await (const chunk of stream) {
@@ -178,7 +278,7 @@ for await (const chunk of stream) {
   --no-buffer \\
   -d '{
     "model": "claude-sonnet-4-6",
-    "messages": [{"role":"user","content":"演示一下"}],
+    "messages": [{"role":"user","content":"${userMsg}"}],
     "stream": true
   }'`,
   };
@@ -186,9 +286,9 @@ for await (const chunk of stream) {
   return (
     <section className="live-demo" id="demo">
       <SectionHeader
-        kicker="接入演示"
-        title="改一行 base URL · 跑遍 20+ 模型"
-        sub="同一套 SDK，换一个 base URL，搞定。"
+        kicker={_ts('demo.kicker')}
+        title={_ts('demo.title')}
+        sub={_ts('demo.sub')}
       />
       <div className="ld-grid">
         <div className="ld-code">
@@ -201,7 +301,7 @@ for await (const chunk of stream) {
               >{v}</button>
             ))}
             <button className="ld-copy mono" onClick={() => navigator.clipboard?.writeText(codeSamples[lang])}>
-              复制
+              {_ts('demo.copy')}
             </button>
           </div>
           <pre className="ld-block mono">{codeSamples[lang]}</pre>
@@ -213,17 +313,17 @@ for await (const chunk of stream) {
             <span className="cw-dot d2"/>
             <span className="cw-dot d3"/>
             <span className="cw-title mono">prism · streaming response</span>
-            <span className="ld-streaming"><span className="ld-streaming-dot"/>streaming</span>
+            <span className="ld-streaming"><span className="ld-streaming-dot"/>{_ts('demo.streaming')}</span>
           </div>
           <div className="ld-term-body mono">
             <span className="ld-prompt">$</span> python demo.py
             <div className="ld-stream">{streamText}<span className="ld-caret"/></div>
           </div>
           <div className="ld-term-foot mono">
-            <span>routed to</span>
-            <em>Anthropic 官方 API</em>
+            <span>{_ts('demo.routed_to')}</span>
+            <em>{_ts('demo.routed_via')}</em>
             <span className="dot">·</span>
-            <span>每条请求详情可在控制台查</span>
+            <span>{_ts('demo.foot')}</span>
           </div>
         </div>
       </div>
@@ -237,9 +337,9 @@ function ClientStrip() {
   return (
     <section className="clients" id="clients">
       <SectionHeader
-        kicker="客户端适配"
-        title="你的客户端 · 零改造接入"
-        sub="现成的工具直接用，改个 base URL 即可。"
+        kicker={_ts('clients.kicker')}
+        title={_ts('clients.title')}
+        sub={_ts('clients.sub')}
       />
       <div className="client-row">
         {window.PRISM_CLIENTS.map((c, i) => (
@@ -293,15 +393,15 @@ function CategoryGrid() {
   return (
     <section className="categories" id="models">
       <SectionHeader
-        kicker="按场景挑模型"
-        title="不知道选哪个？我们替你挑了"
-        sub="按使用场景给的推荐，跳过看模型表格。"
+        kicker={_ts('categories.kicker')}
+        title={_ts('categories.title')}
+        sub={_ts('categories.sub')}
       />
       <div className="cat-grid">
-        {window.PRISM_CATEGORIES.map(cat => <CategoryCard key={cat.id} cat={cat}/>)}
+        {CATEGORIES_LIST.map(cat => <CategoryCard key={cat.id} cat={cat}/>)}
       </div>
       <div className="cat-foot">
-        <a href="/api-docs#tag/models" className="cta-ghost">查看全部模型 →</a>
+        <a href="/api-docs#tag/models" className="cta-ghost">{_ts('categories.see_all')}</a>
       </div>
     </section>
   );
@@ -312,10 +412,9 @@ function CategoryCard({ cat }) {
     <article className="cat-card">
       <header className="cat-head">
         <h3 className="cat-title display">
-          {cat.title}
-          <span className="mono cat-en">{cat.en}</span>
+          {_ts(cat.titleKey)}
         </h3>
-        <p className="cat-why">{cat.why}</p>
+        <p className="cat-why">{_ts(cat.whyKey)}</p>
       </header>
       <ul className="cat-picks">
         {cat.picks.map((p, i) => (
@@ -326,7 +425,7 @@ function CategoryCard({ cat }) {
                 <span className="cat-pick-name">{p.model}</span>
                 <span className="mono cat-pick-price">{p.price}</span>
               </div>
-              <div className="cat-pick-tip">{p.tip}</div>
+              <div className="cat-pick-tip">{_ts(p.tipKey)}</div>
             </div>
           </li>
         ))}
@@ -339,16 +438,16 @@ function CategoryCard({ cat }) {
 /* ─── 7 · Channel transparency banner ───────────────────────────── */
 
 function ChannelBanner() {
-  const keys = Object.keys(window.PRISM_CHANNEL_EXAMPLES);
+  const keys = Object.keys(CHANNEL_EXAMPLES);
   const [active, setActive] = useStateS(keys[0]);
-  const example = window.PRISM_CHANNEL_EXAMPLES[active];
+  const example = CHANNEL_EXAMPLES[active];
 
   return (
     <section className="channels" id="channels">
       <SectionHeader
-        kicker="渠道明牌"
-        title="我们告诉你每个模型走的是哪条路"
-        sub="每条上游、每个区域、每条政策，请求详情都查得到。"
+        kicker={_ts('channels.kicker')}
+        title={_ts('channels.title')}
+        sub={_ts('channels.sub')}
       />
 
       <div className="ch-toggle">
@@ -358,7 +457,7 @@ function ChannelBanner() {
             className={`ch-tog-btn ${k === active ? 'active' : ''}`}
             onClick={() => setActive(k)}
           >
-            {window.PRISM_CHANNEL_EXAMPLES[k].name}
+            {_ts(CHANNEL_EXAMPLES[k].nameKey)}
           </button>
         ))}
       </div>
@@ -371,31 +470,29 @@ function ChannelBanner() {
               <path d="M3 19c1.5-3.5 5-5 8-5s6.5 1.5 8 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
           </div>
-          <div className="ch-node-label">客户请求</div>
-          <div className="mono ch-node-en">user request</div>
+          <div className="ch-node-label">{_ts('channels.user_request')}</div>
         </div>
 
         <div className="ch-line ch-line-1" aria-hidden="true"/>
 
         <div className="ch-node prism">
           <div className="ch-node-icon iridescent-text" style={{fontSize: 20, fontFamily: 'var(--font-display)', fontWeight: 700}}>P</div>
-          <div className="ch-node-label">Prism 路由器</div>
-          <div className="mono ch-node-en">router</div>
+          <div className="ch-node-label">{_ts('channels.router')}</div>
         </div>
 
         <div className="ch-arc">
           {example.channels.map((ch, i) => (
             <div key={i} className={`ch-card arc-${i+1}`}>
               <div className="ch-card-head">
-                <span className="ch-card-name">{ch.name}</span>
+                <span className="ch-card-name">{_ts(ch.nameKey)}</span>
                 <span className={`ch-health h-${ch.health}`}>{ch.health}</span>
               </div>
               <div className="ch-card-meta">
-                <div><span className="meta-k">region</span><span className="meta-v mono">{ch.region}</span></div>
+                <div><span className="meta-k">{_ts('channels.ex.region_label')}</span><span className="meta-v mono">{ch.region}</span></div>
                 <div><span className="meta-k">p50</span><span className="meta-v mono">{ch.p50}ms</span></div>
                 <div><span className="meta-k">weight</span><span className="meta-v mono">{ch.weight}%</span></div>
               </div>
-              <div className="ch-card-policy">{ch.policy}</div>
+              <div className="ch-card-policy">{_ts(ch.policyKey)}</div>
               <div className="ch-weight-bar">
                 <div className="ch-weight-fill" style={{width: `${ch.weight}%`, background: 'var(--iridescent)'}}/>
               </div>
@@ -405,8 +502,8 @@ function ChannelBanner() {
       </div>
 
       <div className="ch-foot">
-        <span>每条请求的真实路由结果，控制台请求详情里都查得到。</span>
-        <a className="link-arrow" href="/quickstart">读 5 分钟 Quickstart →</a>
+        <span>{_ts('channels.foot')}</span>
+        <a className="link-arrow" href="/quickstart">{_ts('channels.read_quickstart')}</a>
       </div>
     </section>
   );
@@ -418,19 +515,18 @@ function NotDoing() {
   return (
     <section className="not-doing" id="not-doing">
       <SectionHeader
-        kicker="边界 · 我们不做"
-        title="同行做的脏活，我们一件都不做"
-        sub="四件能短期赚钱、长期掉信任的事——我们拒做。"
+        kicker={_ts('notdoing.kicker')}
+        title={_ts('notdoing.title')}
+        sub={_ts('notdoing.sub')}
       />
       <div className="nd-grid">
-        {window.PRISM_NOT_DOING.map((it, i) => (
+        {NOTDOING_LIST.map((it, i) => (
           <article key={i} className="nd-card">
             <div className="nd-cross" aria-hidden="true">✕</div>
             <h3 className="nd-title display">
-              {it.title}
-              <span className="mono nd-en">{it.en}</span>
+              {_ts(it.titleKey)}
             </h3>
-            <p className="nd-body">{it.body}</p>
+            <p className="nd-body">{_ts(it.bodyKey)}</p>
           </article>
         ))}
       </div>
@@ -449,39 +545,39 @@ function PricingPreview() {
   return (
     <section className="pricing" id="pricing">
       <SectionHeader
-        kicker="定价"
-        title="充 1 万到账 9850 · 0% 加价"
-        sub="Inference 不加价。充值收 1.5% 手续费——覆盖支付通道 / 链上 gas / 商户费。"
+        kicker={_ts('pricing.kicker')}
+        title={_ts('pricing.title')}
+        sub={_ts('pricing.sub')}
       />
       <div className="price-grid price-grid-2">
         <PriceCard
-          tier="Self-serve"
+          tier={_ts('pricing.tier.self.tier')}
           featured
-          price="按量付费"
-          tagline="充值即用 · 1.5% 充值费 · 0% 加价"
+          price={_ts('pricing.tier.self.price')}
+          tagline={_ts('pricing.tier.self.tagline')}
           features={[
-            '20+ 模型，五家上游全覆盖',
-            'OpenAI / Anthropic 双协议',
-            '价格²反比加权路由 + prompt cache 透传',
-            '限速按充值阶梯 60 → 1200 RPM',
-            '支付宝 / 微信 / USDC 充值',
+            _ts('pricing.tier.self.f1'),
+            _ts('pricing.tier.self.f2'),
+            _ts('pricing.tier.self.f3'),
+            _ts('pricing.tier.self.f4'),
+            _ts('pricing.tier.self.f5'),
           ]}
-          cta="立即注册"
+          cta={_ts('pricing.tier.self.cta')}
           ctaHref="/signup"
         />
         <PriceCard
-          tier="Team"
-          price="联系销售"
-          tagline="对公合同 · 专票 · 私有渠道"
+          tier={_ts('pricing.tier.team.tier')}
+          price={_ts('pricing.tier.team.price')}
+          tagline={_ts('pricing.tier.team.tagline')}
           features={[
-            'Self-serve 全部能力',
-            '对公收款 + 月结合同',
-            '增值税专票',
-            '私有上游渠道（独占容量）',
-            'SLA + 7×24 工单',
-            '专属客户经理',
+            _ts('pricing.tier.team.f1'),
+            _ts('pricing.tier.team.f2'),
+            _ts('pricing.tier.team.f3'),
+            _ts('pricing.tier.team.f4'),
+            _ts('pricing.tier.team.f5'),
+            _ts('pricing.tier.team.f6'),
           ]}
-          cta="加微信联系"
+          cta={_ts('pricing.tier.team.cta')}
           onClick={() => setContactOpen(true)}
         />
       </div>
@@ -489,12 +585,12 @@ function PricingPreview() {
 
       <div className="price-calc">
         <div className="pc-head">
-          <span className="kicker mono">实时计算器 · live calculator</span>
-          <h3 className="pc-title display">看看你这次会花多少钱</h3>
+          <span className="kicker mono">{_ts('pricing.calc.kicker')}</span>
+          <h3 className="pc-title display">{_ts('pricing.calc.title')}</h3>
         </div>
         <div className="pc-controls">
           <label className="pc-field">
-            <span className="pc-label">选择模型</span>
+            <span className="pc-label">{_ts('pricing.calc.model')}</span>
             <select
               className="pc-input"
               value={model.id}
@@ -504,7 +600,7 @@ function PricingPreview() {
             </select>
           </label>
           <label className="pc-field">
-            <span className="pc-label">每月 tokens（输入+输出）</span>
+            <span className="pc-label">{_ts('pricing.calc.tokens')}</span>
             <input
               className="pc-input mono"
               type="number"
@@ -516,19 +612,16 @@ function PricingPreview() {
           </label>
           <div className="pc-result">
             <div className="pc-result-row">
-              <span>Prism 价</span>
+              <span>{_ts('pricing.calc.prism')}</span>
               <span className="display pc-num">${cost}</span>
             </div>
             <div className="pc-result-row pc-result-secondary">
-              <span>vs 官方价</span>
-              <span className="mono">±0.00 · 完全一致</span>
+              <span>{_ts('pricing.calc.vs')}</span>
+              <span className="mono">{_ts('pricing.calc.match')}</span>
             </div>
           </div>
         </div>
-        <div className="pc-note">
-          Inference 按 <code>price_in × token_in + price_out × token_out</code> 精确计算，与上游一致。
-          充值时另收 <code>1.5%</code> 手续费（充 1 万到账 9850）。每条请求扣费写进 <code>usage_logs</code>，月底可下载对账 CSV。
-        </div>
+        <div className="pc-note">{_ts('pricing.calc.note')}</div>
       </div>
 
       <PaymentMethods />
@@ -551,15 +644,15 @@ function PaymentMethods() {
   return (
     <div className="pay-row">
       <div className="pay-head">
-        <span className="kicker mono">充值方式 · payment methods</span>
-        <h3 className="pay-title display">5 种通道 · 一律 1.5% 充值费</h3>
-        <p className="pay-sub mono">同一档手续费，覆盖银行 / 商户 / 链上 gas。$5 起充。</p>
+        <span className="kicker mono">{_ts('pay.kicker')}</span>
+        <h3 className="pay-title display">{_ts('pay.title')}</h3>
+        <p className="pay-sub mono">{_ts('pay.sub')}</p>
       </div>
 
       <div className="pay-grid">
-        <PayCard icon="alipay" title="支付宝" en="Alipay" desc="国内个人 · 扫码 + 邮件核对 · 1h 内到账" badge="人工核对" />
-        <PayCard icon="wechat" title="微信支付" en="WeChat Pay" desc="国内个人 · 扫码 + 邮件核对 · 1h 内到账" badge="人工核对" />
-        <PayCard icon="bank" title="对公转账" en="Bank wire" desc="Team 套餐专享 · 增值税专票 · 月结" badge="Team only" />
+        <PayCard icon="alipay" titleKey="pay.alipay.title" descKey="pay.alipay.desc" badgeKey="pay.alipay.badge" />
+        <PayCard icon="wechat" titleKey="pay.wechat.title" descKey="pay.wechat.desc" badgeKey="pay.wechat.badge" />
+        <PayCard icon="bank"   titleKey="pay.bank.title"   descKey="pay.bank.desc"   badgeKey="pay.bank.badge" />
 
         <div className="pay-card pay-card-crypto">
           <div className="pay-card-head">
@@ -567,18 +660,18 @@ function PaymentMethods() {
             <div>
               <div className="pay-card-title">
                 USDC (TRC20)
-                <span className="pay-card-pill">推荐</span>
+                <span className="pay-card-pill">{_ts('pay.usdc.recommended')}</span>
               </div>
-              <div className="pay-card-en mono">国内首选 · 链上费 ≈ $1</div>
+              <div className="pay-card-en mono">{_ts('pay.usdc.trc.tag')}</div>
             </div>
           </div>
           <div className="pay-addr-row">
             <code className="pay-addr mono" title={TRC_ADDR}>{TRC_ADDR}</code>
             <button className="pay-copy mono" onClick={() => copy(TRC_ADDR, 'trc')}>
-              {copied === 'trc' ? '已复制' : '复制'}
+              {copied === 'trc' ? _ts('pay.copied') : _ts('pay.copy')}
             </button>
           </div>
-          <div className="pay-warn">⚠️ 仅 Tron / TRC20 网络 · 地址以 T 开头</div>
+          <div className="pay-warn">⚠️ {_ts('pay.usdc.trc.warn')}</div>
         </div>
 
         <div className="pay-card pay-card-crypto">
@@ -586,16 +679,16 @@ function PaymentMethods() {
             <span className="pay-icon pay-icon-sol">◎</span>
             <div>
               <div className="pay-card-title">USDC (Solana)</div>
-              <div className="pay-card-en mono">USDC-SPL · ~$0.001 链上费</div>
+              <div className="pay-card-en mono">{_ts('pay.usdc.sol.tag')}</div>
             </div>
           </div>
           <div className="pay-addr-row">
             <code className="pay-addr mono" title={SOL_ADDR}>{SOL_ADDR}</code>
             <button className="pay-copy mono" onClick={() => copy(SOL_ADDR, 'sol')}>
-              {copied === 'sol' ? '已复制' : '复制'}
+              {copied === 'sol' ? _ts('pay.copied') : _ts('pay.copy')}
             </button>
           </div>
-          <div className="pay-warn">⚠️ 仅 Solana 网络 · 用错网络资金丢失</div>
+          <div className="pay-warn">⚠️ {_ts('pay.usdc.sol.warn')}</div>
         </div>
 
         <div className="pay-card pay-card-crypto">
@@ -603,27 +696,28 @@ function PaymentMethods() {
             <span className="pay-icon pay-icon-evm">⬢</span>
             <div>
               <div className="pay-card-title">USDC (EVM)</div>
-              <div className="pay-card-en mono">BSC / Polygon / Arbitrum / ERC20</div>
+              <div className="pay-card-en mono">{_ts('pay.usdc.evm.tag')}</div>
             </div>
           </div>
           <div className="pay-addr-row">
             <code className="pay-addr mono" title={EVM_ADDR}>{EVM_ADDR}</code>
             <button className="pay-copy mono" onClick={() => copy(EVM_ADDR, 'evm')}>
-              {copied === 'evm' ? '已复制' : '复制'}
+              {copied === 'evm' ? _ts('pay.copied') : _ts('pay.copy')}
             </button>
           </div>
-          <div className="pay-warn">推荐 BSC / Polygon · ERC20 链上费贵</div>
+          <div className="pay-warn">{_ts('pay.usdc.evm.warn')}</div>
         </div>
       </div>
 
       <div className="pay-foot mono">
-        最低 $5 起充 · 余额永不过期 · 7 天无理由退款 · 详见 <a href="https://github.com/meiyaobuyao123-hash/AIzhongzhuanzhan/blob/main/docs/payment-methods.md" target="_blank" rel="noreferrer">支付方式文档</a>
+        {_ts('pay.foot')}
+        <a href="https://github.com/meiyaobuyao123-hash/AIzhongzhuanzhan/blob/main/docs/payment-methods.md" target="_blank" rel="noreferrer">{_ts('pay.foot.link')}</a>
       </div>
     </div>
   );
 }
 
-function PayCard({ icon, title, en, desc, badge }) {
+function PayCard({ icon, titleKey, descKey, badgeKey }) {
   return (
     <div className="pay-card">
       <div className="pay-card-head">
@@ -634,12 +728,11 @@ function PayCard({ icon, title, en, desc, badge }) {
           {icon === 'stripe' && 'S'}
         </span>
         <div>
-          <div className="pay-card-title">{title}</div>
-          <div className="pay-card-en mono">{en}</div>
+          <div className="pay-card-title">{_ts(titleKey)}</div>
         </div>
       </div>
-      <div className="pay-card-desc">{desc}</div>
-      {badge && <div className="pay-badge">{badge}</div>}
+      <div className="pay-card-desc">{_ts(descKey)}</div>
+      {badgeKey && <div className="pay-badge">{_ts(badgeKey)}</div>}
     </div>
   );
 }
@@ -648,7 +741,7 @@ function PriceCard({ tier, price, tagline, features, cta, ctaHref, onClick, feat
   const cls = featured ? 'cta-primary' : 'cta-ghost';
   return (
     <article className={`price-card ${featured ? 'featured' : ''}`}>
-      {featured && <div className="price-ribbon">推荐</div>}
+      {featured && <div className="price-ribbon">{_ts('pricing.recommended')}</div>}
       <header className="price-head">
         <div className="price-tier display">{tier}</div>
         <div className="price-cost-eq mono">cost = price</div>
@@ -690,16 +783,16 @@ function ContactSalesModal({ onClose }) {
              textAlign: 'center',
            }}>
         <h2 style={{margin: '0 0 6px', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em'}}>
-          联系销售
+          {_ts('contact.title')}
         </h2>
         <p style={{margin: '0 0 18px', color: '#71717A', fontSize: 13}}>
-          扫码加微信，拉你进对接群
+          {_ts('contact.sub')}
         </p>
         <img src="/suanli/qr-wechat-contact.jpg"
-             alt="微信加好友二维码"
+             alt={_ts('contact.alt')}
              style={{width: '100%', maxWidth: 260, borderRadius: 10, display: 'block', margin: '0 auto'}}/>
         <p style={{margin: '14px 0 0', fontSize: 12, color: '#A1A1AA'}}>
-          六一学长 · 工作时间 1 小时内回复
+          {_ts('contact.signature')}
         </p>
         <button onClick={onClose}
                 style={{
@@ -708,7 +801,7 @@ function ContactSalesModal({ onClose }) {
                   color: '#18181B', fontSize: 13, cursor: 'pointer',
                   fontFamily: 'inherit',
                 }}>
-          关闭
+          {_ts('contact.close')}
         </button>
       </div>
     </div>
@@ -722,18 +815,18 @@ function FAQ() {
   return (
     <section className="faq" id="faq">
       <SectionHeader
-        kicker="FAQ"
-        title="常见问题"
-        sub="签合同前你想问财务的问题，先问我们。"
+        kicker={_ts('faq.kicker')}
+        title={_ts('faq.title')}
+        sub={_ts('faq.sub')}
       />
       <div className="faq-list">
-        {window.PRISM_FAQ.map((it, i) => (
+        {FAQ_LIST.map((it, i) => (
           <div key={i} className={`faq-item ${i === open ? 'open' : ''}`}>
             <button className="faq-q" onClick={() => setOpen(o => o === i ? -1 : i)}>
-              <span className="faq-q-text">{it.q}</span>
+              <span className="faq-q-text">{_ts(it.qKey)}</span>
               <span className="faq-q-icon" aria-hidden="true">{i === open ? '−' : '+'}</span>
             </button>
-            <div className="faq-a"><p>{it.a}</p></div>
+            <div className="faq-a"><p>{_ts(it.aKey)}</p></div>
           </div>
         ))}
       </div>
@@ -747,12 +840,12 @@ function FinalCTA() {
   return (
     <section className="final-cta" id="signup">
       <div className="fcta-card">
-        <div className="fcta-eyebrow mono">ready when you are</div>
-        <h2 className="fcta-title display">充 1 万到账 9850 · 立刻接入 20+ 模型</h2>
-        <p className="fcta-sub">0% 加价 · 1.5% 充值费 · 微信 / 支付宝 / USDC 全通道</p>
+        <div className="fcta-eyebrow mono">{_ts('fcta.eyebrow')}</div>
+        <h2 className="fcta-title display">{_ts('fcta.title')}</h2>
+        <p className="fcta-sub">{_ts('fcta.sub')}</p>
         <div className="fcta-row">
-          <a className="cta-primary" href="/signup">立即注册 <Arrow2/></a>
-          <a className="cta-ghost" href="/quickstart">读 5 分钟 Quickstart</a>
+          <a className="cta-primary" href="/signup">{_ts('fcta.cta1')} <Arrow2/></a>
+          <a className="cta-ghost" href="/quickstart">{_ts('fcta.cta2')}</a>
         </div>
         <div className="fcta-glow" aria-hidden="true"/>
       </div>
@@ -768,23 +861,23 @@ function Footer() {
           <Logo/>
           <div>
             <div className="footer-brand-name display">Prism</div>
-            <div className="footer-brand-tag">透明的 AI 模型聚合网关</div>
+            <div className="footer-brand-tag">{_ts('footer.tag')}</div>
           </div>
         </div>
         <nav className="footer-cols">
-          <FCol title="产品" items={[
-            {label:'定价', href:'#pricing'},
-            {label:'控制台', href:'/console'},
-            {label:'登录', href:'/login'},
-            {label:'注册', href:'/signup'},
+          <FCol titleKey="footer.product" items={[
+            {labelKey:'nav.pricing', href:'#pricing'},
+            {labelKey:'nav.console', href:'/console'},
+            {labelKey:'nav.login',   href:'/login'},
+            {labelKey:'nav.signup',  href:'/signup'},
           ]}/>
-          <FCol title="开发者" items={[
-            {label:'API 文档', href:'/api-docs'},
-            {label:'Quickstart', href:'/quickstart'},
-            {label:'客户端适配', href:'#clients'},
+          <FCol titleKey="footer.dev" items={[
+            {labelKey:'console.api_docs', href:'/api-docs'},
+            {labelKey:'console.quickstart', href:'/quickstart'},
+            {labelKey:'clients.kicker', href:'#clients'},
           ]}/>
-          <FCol title="公司" items={[
-            {label:'联系我们', href:'#pricing'},
+          <FCol titleKey="footer.company" items={[
+            {labelKey:'contact.title', href:'#pricing'},
           ]}/>
         </nav>
       </div>
@@ -793,22 +886,20 @@ function Footer() {
         <span className="dot">·</span>
         <span>cost = price · always</span>
         <span className="dot">·</span>
-        <span>京 ICP 备 占位号</span>
+        <span>{_ts('footer.icp')}</span>
       </div>
     </footer>
   );
 }
 
-function FCol({ title, items }) {
+function FCol({ titleKey, items }) {
   return (
     <div className="fcol">
-      <div className="fcol-title mono">{title}</div>
+      <div className="fcol-title mono">{_ts(titleKey)}</div>
       <ul>
         {items.map((it, i) => (
           <li key={i}>
-            <a href={typeof it === 'string' ? '#' : it.href}>
-              {typeof it === 'string' ? it : it.label}
-            </a>
+            <a href={it.href}>{_ts(it.labelKey)}</a>
           </li>
         ))}
       </ul>

@@ -4,6 +4,7 @@
 */
 
 const { useState: useStateHero, useEffect: useEffectHero, useMemo: useMemoHero } = React;
+const _t = window.t;  // local alias to avoid TDZ issues with the `t` symbol
 
 function HeroSection() {
   const models = window.PRISM_HERO_MODELS;
@@ -21,30 +22,30 @@ function HeroSection() {
       <div className="hero-inner">
         <div className="hero-copy">
           <h1 className="hero-title">
-            <span>成本透明，</span>
-            <span className="accent">0 加价</span>
-            <span>。</span>
+            <span>{_t('hero.title.1')}</span>
+            <span className="accent">{_t('hero.title.accent')}</span>
+            <span>{_t('hero.title.2')}</span>
           </h1>
           <p className="hero-sub">
-            5 家上游、20+ 模型，一个 OpenAI 兼容 API。价目表写在你看得见的地方。
+            {_t('hero.sub')}
           </p>
           <p className="hero-sub-en mono">cost = price. always.</p>
 
           <div className="hero-cta-row">
             <a href="/signup" className="cta-primary">
-              <span>立即开始</span>
-              <span className="cta-aside">充 1 万到账 9850</span>
+              <span>{_t('hero.cta_primary')}</span>
+              <span className="cta-aside">{_t('hero.cta_aside')}</span>
               <Arrow />
             </a>
-            <a href="/quickstart" className="cta-ghost">读 5 分钟 Quickstart</a>
+            <a href="/quickstart" className="cta-ghost">{_t('hero.cta_ghost')}</a>
           </div>
 
           <div className="hero-trust-mini">
-            <span>0% 加价 · 1.5% 充值费</span>
+            <span>{_t('hero.trust.1')}</span>
             <span className="dot">·</span>
-            <span>支付宝 / 微信 / USDC</span>
+            <span>{_t('hero.trust.2')}</span>
             <span className="dot">·</span>
-            <span>OpenAI 协议直接兼容</span>
+            <span>{_t('hero.trust.3')}</span>
           </div>
         </div>
 
@@ -67,15 +68,15 @@ function HeroSection() {
             <CodeWindow model={selected} animKey={animKey} />
 
             <div className="msc-stats" key={animKey}>
-              <Stat label="输入价" en="input"  value={`$${selected.priceIn}`}  unit=" / 1M tokens" />
-              <Stat label="输出价" en="output" value={`$${selected.priceOut}`} unit=" / 1M tokens" />
-              <Stat label="p50"    en="latency" value={`${selected.p50}ms`} />
-              <Stat label="上下文" en="context" value={selected.ctx} />
+              <Stat labelKey="hero.stat.input"   value={`$${selected.priceIn}`}  unit={_t('hero.unit_per_million')} />
+              <Stat labelKey="hero.stat.output"  value={`$${selected.priceOut}`} unit={_t('hero.unit_per_million')} />
+              <Stat labelKey="hero.stat.latency" value={`${selected.p50}ms`} />
+              <Stat labelKey="hero.stat.context" value={selected.ctx} />
             </div>
 
             <p className="msc-caption">
               <span className="msc-arrow">↑</span>
-              <span>点击任一模型，代码里的 <code>model</code> 字段会变；其他什么都不用动。</span>
+              <span>{_t('hero.caption')}</span>
             </p>
           </div>
         </div>
@@ -173,12 +174,11 @@ resp = client.chat.completions.create(
 
 /* ─── Stat tile in the demo widget ──────────────────────────────── */
 
-function Stat({ label, en, value, unit }) {
+function Stat({ labelKey, value, unit }) {
   return (
     <div className="stat-tile">
       <div className="stat-k">
-        <span>{label}</span>
-        <span className="mono stat-en">{en}</span>
+        <span>{_t(labelKey)}</span>
       </div>
       <div className="stat-v">
         <span>{value}</span>
