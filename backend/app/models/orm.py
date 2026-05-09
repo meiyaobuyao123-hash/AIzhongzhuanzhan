@@ -55,10 +55,21 @@ class User(Base):
         String(16), nullable=False, default="self-serve"
     )
 
+    # USD wallet — fed by USDC chain credits + admin USD top-ups.
+    # 1 USD = 100_000_000 µ¢ (micro-cents).
     balance_micro_cents: Mapped[int] = mapped_column(
         BigInteger, nullable=False, default=0
     )
     total_topped_up_micro_cents: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0
+    )
+
+    # v0.4 dual wallet: CNY wallet — fed by 支付宝 / 微信 credits.
+    # 1 CNY = 100_000_000 µ¥ (micro-yuan), same scale as USD µ¢.
+    balance_cny_micro_yuan: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0
+    )
+    total_topped_up_cny_micro_yuan: Mapped[int] = mapped_column(
         BigInteger, nullable=False, default=0
     )
 
@@ -133,7 +144,10 @@ class Model(Base):
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     context_window: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    # All prices are micro-cents per 1M tokens. e.g. $15/M = 1_500_000_000
+    # Native unit per 1M tokens. Semantic depends on `price_currency`:
+    #   currency='USD' → value is micro-cents (1 USD = 100_000_000 µ¢)
+    #   currency='CNY' → value is micro-yuan (1 CNY = 100_000_000 µ¥)
+    # e.g. $15/M = 1_500_000_000 µ¢; ¥0.8/M = 80_000_000 µ¥.
     price_input_per_million: Mapped[int] = mapped_column(BigInteger, nullable=False)
     price_output_per_million: Mapped[int] = mapped_column(BigInteger, nullable=False)
     price_cache_read_per_million: Mapped[int | None] = mapped_column(
@@ -141,6 +155,11 @@ class Model(Base):
     )
     price_cache_write_per_million: Mapped[int | None] = mapped_column(
         BigInteger, nullable=True
+    )
+
+    # v0.4 dual wallet: native pricing currency. Defaults USD for back-compat.
+    price_currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, default="USD"
     )
 
     capabilities: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -292,8 +311,13 @@ class BalanceTransaction(Base):
 
     type: Mapped[str] = mapped_column(String(16), nullable=False)
 
+    # amount_micro_cents semantic depends on `currency`:
+    #   currency='USD' → micro-cents
+    #   currency='CNY' → micro-yuan
+    # 'balance_after' likewise stores the post-mutation balance OF THAT currency wallet.
     amount_micro_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     balance_after_micro_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
 
     related_usage_log_id: Mapped[int | None] = mapped_column(
         ForeignKey("usage_logs.id"), nullable=True
@@ -331,9 +355,12 @@ class PaymentIntent(Base):
 
     channel: Mapped[str] = mapped_column(String(32), nullable=False)
 
+    # amount/fee/credited are in micro_cents (USD) OR micro_yuan (CNY)
+    # depending on `currency` — same scale (1 unit = 100_000_000 µ-base).
     amount_micro_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     fee_micro_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     credited_micro_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
 
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="pending"

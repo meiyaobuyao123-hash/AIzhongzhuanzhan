@@ -319,18 +319,53 @@ async def record_request_outcome_v02(
     await db.flush()
 
     if cost_micro_cents > 0:
+        from app.billing.recorder import _deduct_from_wallets
+        from app.errors import InsufficientBalance
         await db.refresh(user)
-        actual = min(cost_micro_cents, user.balance_micro_cents)
-        if actual > 0:
-            user.balance_micro_cents -= actual
+        model_currency = (model.price_currency or "USD").upper()
+        try:
+            charged_currency, actual = _deduct_from_wallets(
+                user, cost_micro_cents, model_currency
+            )
+            balance_after = (
+                user.balance_micro_cents if charged_currency == "USD"
+                else user.balance_cny_micro_yuan
+            )
             db.add(BalanceTransaction(
                 user_id=user.id,
                 type="inference",
                 amount_micro_cents=-actual,
-                balance_after_micro_cents=user.balance_micro_cents,
+                balance_after_micro_cents=balance_after,
+                currency=charged_currency,
                 related_usage_log_id=log.id,
-                description=f"{model.model_id} via channel {channel.id if channel else 'n/a'}",
+                description=(
+                    f"{model.model_id} via channel "
+                    f"{channel.id if channel else 'n/a'} — charged {charged_currency}"
+                ),
             ))
+        except InsufficientBalance:
+            # Bill what we can from the model-native wallet, mark log
+            if model_currency == "USD":
+                actual = max(0, user.balance_micro_cents)
+                user.balance_micro_cents = 0
+                charged_currency = "USD"
+            else:
+                actual = max(0, user.balance_cny_micro_yuan)
+                user.balance_cny_micro_yuan = 0
+                charged_currency = "CNY"
+            log.error_message = (
+                f"{log.error_message or ''}; balance underrun"
+            ).strip("; ")
+            if actual > 0:
+                db.add(BalanceTransaction(
+                    user_id=user.id,
+                    type="inference",
+                    amount_micro_cents=-actual,
+                    balance_after_micro_cents=0,
+                    currency=charged_currency,
+                    related_usage_log_id=log.id,
+                    description=f"{model.model_id} (underrun, partial bill)",
+                ))
 
     await db.commit()
     return log

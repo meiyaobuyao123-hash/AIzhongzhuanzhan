@@ -144,7 +144,8 @@ async def match_and_credit(tx: IncomingTx, db: AsyncSession) -> bool:
         )
         return False
 
-    # Apply credit
+    # Apply credit. USDC chain credits ALWAYS go to the USD wallet
+    # (intent.currency is always 'USD' for chain channels).
     user.balance_micro_cents += intent.credited_micro_cents
     user.total_topped_up_micro_cents += intent.credited_micro_cents
 
@@ -159,8 +160,9 @@ async def match_and_credit(tx: IncomingTx, db: AsyncSession) -> bool:
         type="topup",
         amount_micro_cents=intent.credited_micro_cents,
         balance_after_micro_cents=user.balance_micro_cents,
+        currency="USD",
         related_payment_id=intent.id,
-        description=f"USDT top-up via {tx.network} (tx {tx.tx_hash[:10]}…)",
+        description=f"USDC top-up via {tx.network} (tx {tx.tx_hash[:10]}…)",
     ))
 
     try:

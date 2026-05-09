@@ -162,11 +162,20 @@ def user_disable(id_: Annotated[int, typer.Option("--id", help="User ID")]) -> N
 @user_app.command("topup")
 def user_topup(
     id_: Annotated[int, typer.Option("--id", help="User ID")],
-    amount: Annotated[float, typer.Option(help="Amount in USD")],
+    amount: Annotated[float, typer.Option(help="Amount (USD or CNY per --currency)")],
+    currency: Annotated[str, typer.Option(help="Currency: USD or CNY")] = "USD",
     channel: Annotated[str, typer.Option(help="Payment channel")] = "manual",
     note: Annotated[str | None, typer.Option(help="Operator note")] = None,
 ) -> None:
-    """Top-up user balance. Auto-applies 0.05% fee."""
+    """Top-up user balance. Auto-applies 1.5% fee. Credits the matching wallet.
+
+    --currency USD → 进 USD 钱包 (USDC / 对公电汇 / Stripe 等)
+    --currency CNY → 进 CNY 钱包 (支付宝 / 微信)
+    """
+    cur = currency.upper()
+    if cur not in ("USD", "CNY"):
+        console.print(f"[red]✗[/] currency must be USD or CNY, got {currency}")
+        raise typer.Exit(2)
 
     async def _go():
         async with SessionLocal() as db:
@@ -175,31 +184,44 @@ def user_topup(
                 console.print(f"[red]✗[/] User {id_} not found")
                 raise typer.Exit(1)
 
-            amount_mc = _amount_usd_to_micro_cents(amount)
+            amount_mc = int(round(amount * 100_000_000))
             fee_mc = amount_mc * settings.topup_fee_basis_points // 10_000
             credited_mc = amount_mc - fee_mc
 
-            u.balance_micro_cents += credited_mc
-            u.total_topped_up_micro_cents += credited_mc
+            sym = "$" if cur == "USD" else "¥"
+            if cur == "USD":
+                u.balance_micro_cents += credited_mc
+                u.total_topped_up_micro_cents += credited_mc
+                balance_after = u.balance_micro_cents
+            else:
+                u.balance_cny_micro_yuan += credited_mc
+                u.total_topped_up_cny_micro_yuan += credited_mc
+                balance_after = u.balance_cny_micro_yuan
 
             db.add(BalanceTransaction(
                 user_id=u.id,
                 type="topup",
                 amount_micro_cents=credited_mc,
-                balance_after_micro_cents=u.balance_micro_cents,
-                description=f"Top-up via {channel}; gross ${amount:.2f}, fee {_micro_cents_to_usd_str(fee_mc)}{f'; note: {note}' if note else ''}",
+                balance_after_micro_cents=balance_after,
+                currency=cur,
+                description=(
+                    f"Top-up via {channel} ({cur}); gross {sym}{amount:.2f}, "
+                    f"fee {sym}{fee_mc/100_000_000:.4f}"
+                    f"{f'; note: {note}' if note else ''}"
+                ),
             ))
             await record_audit(
                 db, actor="admin-cli", action="user.topup", target=str(u.id),
-                payload={"channel": channel, "amount_usd": amount, "fee_usd": fee_mc / 100_000_000},
+                payload={"channel": channel, "currency": cur, "amount": amount,
+                          "fee": fee_mc / 100_000_000},
             )
             await db.commit()
 
             console.print(
                 f"[green]✓[/] Topped up user {id_}: "
-                f"gross={amount:.2f} USD, fee={_micro_cents_to_usd_str(fee_mc)} (万 5), "
-                f"credited={_micro_cents_to_usd_str(credited_mc)}, "
-                f"new balance={_micro_cents_to_usd_str(u.balance_micro_cents)}"
+                f"gross={sym}{amount:.2f}, fee={sym}{fee_mc/100_000_000:.4f} (1.5%), "
+                f"credited={sym}{credited_mc/100_000_000:.4f}, "
+                f"new {cur} balance={sym}{balance_after/100_000_000:.4f}"
             )
 
     _run(_go())

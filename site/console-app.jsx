@@ -134,7 +134,17 @@ function ConsoleApp() {
         <div className="cs-page-header">
           <h1>{TABS.find(t => t.id === tab).label}</h1>
           <div className="cs-balance-pill">
-            余额：<strong>{fmtUSD(me.balance_usd)}</strong>
+            <span style={{display: 'inline-flex', gap: 12, alignItems: 'center'}}>
+              <span title="USDC / USDT 充值进 USD 钱包">
+                <span style={{color: 'var(--text-muted)', fontSize: 11, marginRight: 4}}>USD</span>
+                <strong>{fmtUSD(me.balance_usd)}</strong>
+              </span>
+              <span style={{color: 'var(--text-faint)', fontSize: 11}}>·</span>
+              <span title="支付宝 / 微信 充值进 CNY 钱包">
+                <span style={{color: 'var(--text-muted)', fontSize: 11, marginRight: 4}}>CNY</span>
+                <strong>¥{(me.balance_cny ?? 0).toFixed(2)}</strong>
+              </span>
+            </span>
             <a href="#billing" className="cs-btn cs-btn-primary" style={{padding: '4px 12px'}}>充值</a>
           </div>
         </div>
@@ -166,10 +176,14 @@ function Overview({ me }) {
   return (
     <>
       <div className="cs-metrics">
-        <Metric label="当前余额" value={fmtUSD(me.balance_usd)} meta={`累计充值 ${fmtUSD(me.total_topped_up_usd)}`}/>
+        <Metric label="USD 钱包" value={fmtUSD(me.balance_usd)}
+          meta={`累计 ${fmtUSD(me.total_topped_up_usd)} · USDC 入此`}
+          icon="dollar" accent="green"/>
+        <Metric label="CNY 钱包" value={`¥${(me.balance_cny ?? 0).toFixed(2)}`}
+          meta={`累计 ¥${(me.total_topped_up_cny ?? 0).toFixed(2)} · 支付宝/微信入此`}
+          icon="zap" accent="magenta"/>
         <Metric label="本月调用" value={fmtCompact(totalRequests)} meta="近 30 天"/>
-        <Metric label="本月成本" value={fmtUSD(totalCost)} meta="近 30 天"/>
-        <Metric label="默认限速" value={`${me.default_rpm} RPM`} meta={`tier: ${me.tier}`}/>
+        <Metric label="本月成本" value={fmtUSD(totalCost)} meta="近 30 天 (USD 折算)"/>
       </div>
 
       <section className="cs-section">
@@ -855,17 +869,22 @@ function Billing({ me }) {
   return (
     <>
       <div className="cs-metrics">
-        <Metric label="当前余额" value={fmtUSD(me.balance_usd)}/>
-        <Metric label="累计充值" value={fmtUSD(me.total_topped_up_usd)}/>
-        <Metric label="手续费" value="1.5%" meta="百分之一点五"/>
-        <Metric label="加价" value="0%" meta="cost = price"/>
+        <Metric label="USD 钱包" value={fmtUSD(me.balance_usd)}
+          meta={`累计 ${fmtUSD(me.total_topped_up_usd)}`}
+          icon="dollar" accent="green"/>
+        <Metric label="CNY 钱包" value={`¥${(me.balance_cny ?? 0).toFixed(2)}`}
+          meta={`累计 ¥${(me.total_topped_up_cny ?? 0).toFixed(2)}`}
+          icon="zap" accent="magenta"/>
+        <Metric label="充值手续费" value="1.5%" meta="cost = price"/>
+        <Metric label="跨币种汇率" value="6.5 / 7.0"
+          meta="USD→CN model · CNY→intl model"/>
       </div>
 
       <section className="cs-section">
-        <h2>USDC 自动到账</h2>
+        <h2>USD 钱包充值（USDC 自动到账）</h2>
         <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
           点击任一通道生成专属充值地址 + 精确金额 · 链上扫到自动入账（30 秒内）·
-          余额永不过期 · 万分之五手续费
+          1.5% 手续费 · 进 USD 钱包，调用国外模型 1:1 不损失
         </p>
         <div className="cs-pay-grid">
           {USDT_CHANNELS.map(ch => (
@@ -877,11 +896,11 @@ function Billing({ me }) {
       </section>
 
       <section className="cs-section">
-        <h2>国内支付（人工核对）</h2>
+        <h2>CNY 钱包充值（支付宝 / 微信，人工核对）</h2>
         <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
-          扫码付款后请把支付截图 + 你的邮箱（<span className="mono">{me.email}</span>）
-          发到运营邮箱 <span className="mono">ops@ai100trading.cn</span>，工作时间 1 小时内入账。
-          v0.4 计划接入支付宝 PC / 微信 Native 接口实现自动到账。
+          扫码付款后请把支付截图 + 你的邮箱（<span className="mono">{me.email}</span>）+ 充值金额
+          发到运营邮箱 <span className="mono">ops@ai100trading.cn</span>，工作时间 1 小时内入 CNY 钱包。
+          调用 Doubao / MiniMax / 等国内模型 1:1 不损失；调用国外模型按 7 ¥ = 1 USD 折算。
         </p>
         <div className="cs-pay-grid">
           <DomesticPayCard

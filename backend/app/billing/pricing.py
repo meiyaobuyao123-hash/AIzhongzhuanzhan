@@ -1,9 +1,11 @@
-"""Cost calculation: tokens × model unit price → micro-cents (integer math).
+"""Cost calculation: tokens × model unit price → (cost, currency).
 
-All money math is integer micro-cents. 1 USD = 100_000_000 micro-cents.
-Model.price_*_per_million is already micro-cents per 1M tokens.
+v0.4 dual-wallet: cost is computed in the model's NATIVE currency. Whether
+the user pays from USD wallet, CNY wallet, or both (with FX) is decided
+later in `billing.recorder`.
 
-cost = sum(tokens_X × price_X_per_million // 1_000_000)
+Money math is integer micro-cents (USD) or micro-yuan (CNY); same scale,
+1 base unit = 100_000_000 µ.
 """
 
 from __future__ import annotations
@@ -13,7 +15,20 @@ from app.schemas.common import Usage
 
 
 def calculate_cost_micro_cents(usage: Usage, model: Model) -> int:
-    """Compute total cost in micro-cents from a Usage and a Model.
+    """Backwards-compatible shim. Returns native-currency cost as int.
+
+    For 'USD' models this is micro-cents. For 'CNY' models this is micro-yuan.
+    Callers that care about currency should use :func:`calculate_cost_native`.
+    """
+    cost, _ = calculate_cost_native(usage, model)
+    return cost
+
+
+def calculate_cost_native(usage: Usage, model: Model) -> tuple[int, str]:
+    """Compute total cost in the model's native currency.
+
+    Returns (cost_micro, currency) where currency is 'USD' or 'CNY' and
+    cost_micro is in micro-cents (USD) or micro-yuan (CNY) respectively.
 
     Reasoning tokens (OpenAI o-series) bill at the output rate.
     Cache_read / cache_write fall back to 0 if their per-million price isn't set.
@@ -37,12 +52,12 @@ def calculate_cost_micro_cents(usage: Usage, model: Model) -> int:
         )
 
     if usage.reasoning_tokens:
-        # Reasoning tokens bill at output rate (OpenAI's spec).
         cost += (
             usage.reasoning_tokens * model.price_output_per_million // 1_000_000
         )
 
-    return cost
+    currency = (model.price_currency or "USD").upper()
+    return cost, currency
 
 
 def estimate_max_cost_micro_cents(
@@ -50,8 +65,7 @@ def estimate_max_cost_micro_cents(
     max_output_tokens: int,
     model: Model,
 ) -> int:
-    """Pre-flight balance estimate: most-pessimistic cost if all output tokens
-    are output (no cache)."""
+    """Pre-flight balance estimate: most-pessimistic cost in NATIVE currency."""
     cost = 0
     cost += prompt_tokens_estimate * model.price_input_per_million // 1_000_000
     cost += max_output_tokens * model.price_output_per_million // 1_000_000

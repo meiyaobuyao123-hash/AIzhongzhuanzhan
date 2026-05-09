@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     topup_fee_basis_points: int = 150
     """150 bps = 1.5% — covers Stripe / 商户号 / 链上 gas 等通道成本"""
 
+    # v0.4 dual-wallet cross-currency FX rates.
+    # Mid-market is ~7.20 CNY/USD; we apply asymmetric rates (both worse
+    # for the user than mid-market) to leave us a spread covering FX risk.
+    # Same-currency wallet → same-currency model = 1:1, no FX applied.
+    fx_usd_to_cny_for_cn_model: float = 6.5
+    """USD wallet 用于国内模型: 1 USD 抵 6.5 CNY (用户多付 ~10% vs 7.20 mid)"""
+    fx_cny_to_usd_for_intl_model: float = 7.0
+    """CNY wallet 用于国外模型: 7 CNY 抵 1 USD (用户多付 ~3% vs 7.20 mid)"""
+
     # Redis
     redis_url: str = "redis://127.0.0.1:6379/0"
 

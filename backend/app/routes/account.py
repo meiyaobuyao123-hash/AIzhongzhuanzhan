@@ -98,9 +98,16 @@ def _user_view(u: User) -> dict:
         "tier": u.tier,
         "display_name": u.display_name,
         "avatar_url": u.avatar_url,
+        # USD wallet
         "balance_micro_cents": u.balance_micro_cents,
         "balance_usd": round(u.balance_micro_cents / 100_000_000, 4),
         "total_topped_up_usd": round(u.total_topped_up_micro_cents / 100_000_000, 2),
+        # CNY wallet (v0.4 dual-wallet)
+        "balance_cny_micro_yuan": u.balance_cny_micro_yuan,
+        "balance_cny": round(u.balance_cny_micro_yuan / 100_000_000, 2),
+        "total_topped_up_cny": round(u.total_topped_up_cny_micro_yuan / 100_000_000, 2),
+        # Tier limits use USD-equivalent of total topped up; for now we only count
+        # USD for tier purposes (CNY top-ups don't bump RPM tier yet)
         "default_rpm": default_rpm_for_user(u.total_topped_up_micro_cents, u.tier),
         "email_verified": u.email_verified,
         "created_at": u.created_at.isoformat() if u.created_at else None,
@@ -273,6 +280,17 @@ async def balance(
         return error_response(exc.status_code, exc.message, exc.error_type, exc.code)
 
     return {
+        "usd": {
+            "balance_micro_cents": user.balance_micro_cents,
+            "balance": round(user.balance_micro_cents / 100_000_000, 4),
+            "total_topped_up": round(user.total_topped_up_micro_cents / 100_000_000, 2),
+        },
+        "cny": {
+            "balance_micro_yuan": user.balance_cny_micro_yuan,
+            "balance": round(user.balance_cny_micro_yuan / 100_000_000, 2),
+            "total_topped_up": round(user.total_topped_up_cny_micro_yuan / 100_000_000, 2),
+        },
+        # Back-compat: legacy fields still present so old clients don't break
         "balance_micro_cents": user.balance_micro_cents,
         "balance_usd": round(user.balance_micro_cents / 100_000_000, 4),
         "total_topped_up_micro_cents": user.total_topped_up_micro_cents,
@@ -411,6 +429,7 @@ async def create_topup_intent(
         amount_micro_cents=base_amount_micro_cents,
         fee_micro_cents=fee,
         credited_micro_cents=credited,
+        currency="USD",  # all USDC channels credit the USD wallet
         status="pending",
         receiver_address=address,
         network=network_hint,
